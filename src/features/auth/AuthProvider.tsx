@@ -1,3 +1,4 @@
+import { CONTRACT_VERSION } from '../../contracts/work.generated';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
@@ -65,14 +66,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               !data ||
               typeof data !== 'object' ||
               !('version' in data) ||
-              data.version !== '1' ||
+              data.version !== CONTRACT_VERSION ||
               !('uid' in data) ||
               data.uid !== user.uid ||
               !('role' in data) ||
               !['student', 'admin'].includes(String(data.role))
             )
               throw new Error('invalid_session');
-            if (!disposed && generation.current === ticket) setSession(data as Session);
+            if (
+              !disposed &&
+              generation.current === ticket &&
+              value.auth.currentUser?.uid === user.uid
+            )
+              setSession(data as Session);
           } catch (caught) {
             if (!disposed && generation.current === ticket) {
               setError(message(caught));

@@ -1,6 +1,7 @@
 {
   "version": "1",
   "files": {
+    "session.generated.ts": "93d25d9e7f5e4f8a632f53073647a9effe0de087d93978707ec896f524c9dadc",
     "work.generated.ts": "89b97be7f1dcfda77a68e21261863809babf182b2b1d035d67e46a5445c10eec",
     "catalog.generated.ts": "3b6f370411bcd3e670a1a2d497c967bff90e47ec909f431f16b2e447139ed79d"
   }

@@ -1,9 +1,6 @@
 import { createContext, useContext } from 'react';
-export interface Session {
-  version: '1';
-  uid: string;
-  role: 'student' | 'admin';
-}
+import type { SessionDto } from '../../contracts/session.generated';
+export type Session = SessionDto;
 export interface AuthState {
   ready: boolean;
   configured: boolean;
