@@ -235,6 +235,9 @@
   }
 }
 @media (max-width: 767px) {
+  .mobileBreak {
+    display: block;
+  }
   .hero {
     grid-template-columns: 1fr;
     padding: 38px 0 36px;
