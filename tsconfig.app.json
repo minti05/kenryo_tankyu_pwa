@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./.cache/app.tsbuildinfo",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "types": ["vite/client", "vite-plugin-pwa/client"],
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@preview-routes": ["./src/features/discovery/PreviewRoutes.tsx"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["src/sw"]
+}

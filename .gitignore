@@ -1,19 +1,9 @@
 node_modules/
 dist/
-coverage/
-.wrangler/
+.cache/
 playwright-report/
 test-results/
-.DS_Store
-
-# 公開用の例だけを管理し、実際の資格情報は管理しない
 .env
 .env.*
 !.env.example
-.dev.vars
-.dev.vars.*
-!.dev.vars.example
-*.pem
-*.key
-*service_account*.json
-*service-account*.json
+.DS_Store

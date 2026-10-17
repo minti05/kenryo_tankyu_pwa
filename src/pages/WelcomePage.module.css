@@ -1,0 +1,315 @@
+.hero {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 7%;
+  padding: 76px 0 65px;
+  align-items: center;
+}
+.copy h1 {
+  font-size: clamp(1.875rem, 3.2vw, 3rem);
+  font-weight: 750;
+  line-height: 1.5;
+  letter-spacing: -0.045em;
+  margin: 20px 0;
+}
+.copy h1 span {
+  color: var(--accent);
+}
+.school {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 10px 0;
+}
+.lead {
+  font-size: 0.875rem;
+  line-height: 2.1;
+  color: var(--muted);
+}
+.login {
+  margin-top: 30px;
+}
+.login > p {
+  font-size: 0.75rem;
+  line-height: 1.8;
+  color: var(--muted);
+  margin: 12px 0;
+}
+.login > p span {
+  font-size: 0.6875rem;
+}
+.login > a {
+  margin-top: 8px;
+}
+.gallery {
+  transform: rotate(1deg);
+}
+.galleryHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.5625rem;
+  letter-spacing: 0.12em;
+  margin-bottom: 13px;
+  color: var(--muted);
+}
+.artGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.artTile {
+  border-radius: 5px;
+  position: relative;
+  min-height: 190px;
+  background: #f0e6dc;
+  padding: 20px;
+  overflow: hidden;
+  color: #3d322a;
+  display: flex;
+  align-items: end;
+}
+.artTile[data-tone='1'] {
+  background: #e5eaf1;
+}
+.artTile[data-tone='2'] {
+  background: #e5eade;
+}
+.artTile[data-tone='3'] {
+  background: #f2ecd9;
+}
+.artTile picture {
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  right: -5px;
+  top: 10px;
+  opacity: 0.45;
+  transform: rotate(-10deg);
+}
+.artTile picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.artTile[data-tone='1'] picture {
+  transform: rotate(12deg);
+}
+.artTile div {
+  position: relative;
+}
+.artTile div > span {
+  font-size: 0.625rem;
+  display: block;
+  margin-bottom: 8px;
+}
+.artTile p {
+  white-space: pre-line;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.75;
+  margin: 0;
+}
+.artNumber {
+  position: absolute;
+  left: 20px;
+  top: 16px;
+  font-size: 0.625rem;
+  opacity: 0.6;
+}
+.galleryCaption {
+  text-align: right;
+  font-size: 0.625rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-top: 12px;
+}
+.introduction {
+  border-top: 1px solid var(--line);
+  padding: 54px 0 30px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8%;
+}
+.introduction h2 {
+  font-size: 1.625rem;
+  line-height: 1.7;
+  letter-spacing: -0.03em;
+  margin: 12px 0;
+}
+.introduction > p {
+  font-size: 0.875rem;
+  line-height: 2.2;
+  color: var(--muted);
+}
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  padding-bottom: 56px;
+}
+.steps article {
+  padding: 25px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.steps article > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--accent);
+}
+.steps article > div span {
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+.steps h3 {
+  font-size: 0.9375rem;
+  margin: 25px 0 12px;
+}
+.steps p {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.9;
+  margin: 0;
+}
+.useAnywhere {
+  border-block: 1px solid var(--line);
+  padding: 32px 0;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+.useAnywhere > svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.useAnywhere h2 {
+  font-size: 1.1875rem;
+  margin: 0 0 10px;
+}
+.useAnywhere p {
+  font-size: 0.75rem;
+  line-height: 1.9;
+  color: var(--muted);
+  margin: 0;
+}
+.useAnywhere > a {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.security {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 20px 0 5px;
+  color: var(--muted);
+}
+.security svg {
+  flex-shrink: 0;
+}
+.security p {
+  font-size: 0.6875rem;
+  line-height: 1.9;
+}
+.mobileBreak {
+  display: none;
+}
+@media (max-width: 1000px) {
+  .hero {
+    gap: 5%;
+    padding-top: 50px;
+  }
+  .artTile {
+    min-height: 175px;
+    padding: 16px;
+  }
+  .artTile p {
+    font-size: 0.8125rem;
+  }
+  .copy h1 {
+    font-size: 2.125rem;
+  }
+  .login button {
+    font-size: 0.75rem;
+    padding-inline: 14px;
+  }
+}
+@media (max-width: 767px) {
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 38px 0 36px;
+    gap: 36px;
+  }
+  .copy h1 {
+    font-size: 2.125rem;
+    margin-top: 18px;
+  }
+  .school {
+    font-size: 0.625rem;
+  }
+  .lead {
+    font-size: 0.8125rem;
+  }
+  .login .button {
+    width: 100%;
+  }
+  .gallery {
+    transform: none;
+  }
+  .artTile {
+    min-height: 166px;
+  }
+  .galleryHeader {
+    font-size: 0.5rem;
+  }
+  .introduction {
+    grid-template-columns: 1fr;
+    padding-top: 35px;
+    gap: 5px;
+  }
+  .introduction h2 {
+    font-size: 1.4375rem;
+  }
+  .introduction > p {
+    font-size: 0.8125rem;
+  }
+  .steps {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding-bottom: 35px;
+  }
+  .steps article {
+    padding: 20px;
+  }
+  .steps h3 {
+    margin: 14px 0 8px;
+  }
+  .useAnywhere {
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+  .useAnywhere div {
+    flex: 1;
+    min-width: 220px;
+  }
+  .useAnywhere > a {
+    margin-left: 52px;
+  }
+  .useAnywhere h2 {
+    font-size: 1.0625rem;
+  }
+  .security {
+    align-items: start;
+  }
+  .security svg {
+    margin-top: 13px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .artTile {
+    transition: transform 0.2s;
+  }
+  .artTile:hover {
+    transform: translateY(-4px);
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "name": "kenryo-tankyu-pwa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "typecheck": "tsc -b",
+    "lint": "eslint . --max-warnings 0",
+    "contracts:check": "node scripts/check-contracts.mjs",
+    "build": "npm run contracts:check && tsc -b && vite build && node scripts/check-production.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "playwright test",
+    "test:report": "playwright show-report",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:production": "playwright test --config playwright.production.config.ts"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.104.3",
+    "lucide-react": "1.58.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-router-dom": "7.18.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.64.1",
+    "@types/node": "22.20.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "eslint": "10.13.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.7",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2",
+    "vite": "8.3.4",
+    "vite-plugin-pwa": "2.0.0",
+    "workbox-precaching": "7.4.1",
+    "workbox-routing": "7.4.1"
+  }
+}

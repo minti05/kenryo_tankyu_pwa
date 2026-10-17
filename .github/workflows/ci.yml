@@ -1,0 +1,21 @@
+name: PWA checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm test
+      - run: npm run test:production
