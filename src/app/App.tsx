@@ -7,7 +7,7 @@ import WelcomePage from '../pages/WelcomePage';
 import { AuthProvider } from '../features/auth/AuthProvider';
 const SearchPage = lazy(() => import('../features/discovery/SearchPage'));
 const SearchGate = lazy(() => import('../features/auth/RequireSession'));
-const PendingWorkPage = lazy(() => import('../features/works/PendingWorkPage'));
+const WorkPage = lazy(() => import('../features/works/WorkPage'));
 const AccountPage = lazy(() => import('../features/auth/AccountPage'));
 const AboutPage = lazy(() => import('../pages/AboutPage'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'));
@@ -78,7 +78,7 @@ export default function App() {
                     path="works/:id"
                     element={
                       <SearchGate>
-                        <PendingWorkPage />
+                        <WorkPage />
                       </SearchGate>
                     }
                   />

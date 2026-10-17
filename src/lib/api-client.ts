@@ -7,8 +7,8 @@ export class ApiError extends Error {
   }
 }
 /** 認証を接続するT05の入口。トークンなしでは通信自体を行わない。 */
-export function createApiClient(getToken: () => Promise<string | null>) {
-  return async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+export function createApiTransport(getToken: () => Promise<string | null>) {
+  return async function request(path: string, options: RequestInit = {}): Promise<Response> {
     if (
       !/^\/api\//.test(path) ||
       path.includes('\\') ||
@@ -19,7 +19,7 @@ export function createApiClient(getToken: () => Promise<string | null>) {
     if (!token) throw new ApiError(401, 'authentication_required');
     const headers = new Headers(options.headers);
     headers.set('Authorization', `Bearer ${token}`);
-    headers.set('Accept', 'application/json');
+    if (!headers.has('Accept')) headers.set('Accept', 'application/json');
     const response = await fetch(path, {
       ...options,
       headers,
@@ -37,6 +37,13 @@ export function createApiClient(getToken: () => Promise<string | null>) {
       }
       throw new ApiError(response.status, code);
     }
+    return response;
+  };
+}
+export function createApiClient(getToken: () => Promise<string | null>) {
+  const transport = createApiTransport(getToken);
+  return async <T>(path: string, options: RequestInit = {}): Promise<T> => {
+    const response = await transport(path, options);
     if (!response.headers.get('content-type')?.includes('application/json'))
       throw new ApiError(response.status, 'invalid_response');
     return response.json() as Promise<T>;

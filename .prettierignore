@@ -6,3 +6,7 @@ test-results
 public
 src/contracts
 package-lock.json
+
+public/pdfjs
+
+test-results-pdf

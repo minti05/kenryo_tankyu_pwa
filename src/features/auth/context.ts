@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import type { SessionDto } from '../../contracts/session.generated';
 export type Session = SessionDto;
 export interface AuthState {
+  requestResponse: (path: string, options?: RequestInit) => Promise<Response>;
   request: <T>(path: string, options?: RequestInit) => Promise<T>;
   ready: boolean;
   configured: boolean;

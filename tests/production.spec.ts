@@ -42,5 +42,6 @@ test('外枠はオフラインで開き、API/PDFをキャッシュに混ぜな�
   expect(state.entries.some((path) => path.startsWith('/api/') || /\.pdf$/i.test(path))).toBe(
     false,
   );
+  expect(state.entries.some((path) => /pdf-runtime|pdf\.worker|\/pdfjs\//.test(path))).toBe(false);
   expect(state.apiFailed).toBe(true);
 });

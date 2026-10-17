@@ -3,11 +3,11 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext, type AuthState } from '../src/features/auth/context';
-import { createApiClient } from '../src/lib/api-client';
+import { createApiClient, createApiTransport } from '../src/lib/api-client';
 import { Layout } from '../src/app/Layout';
 import SearchPage from '../src/features/discovery/SearchPage';
 import SearchGate from '../src/features/auth/RequireSession';
-import PendingWorkPage from '../src/features/works/PendingWorkPage';
+import WorkPage from '../src/features/works/WorkPage';
 import '../src/styles/global.css';
 const entry = new URL(location.href).searchParams.get('entry') ?? '/explore';
 const auth: AuthState = {
@@ -17,6 +17,7 @@ const auth: AuthState = {
   error: '',
   signedIn: true,
   session: { version: '1', uid: 'fixture-alice', role: 'student' },
+  requestResponse: createApiTransport(async () => 'fixture-token'),
   request: createApiClient(async () => 'fixture-token'),
   login: () => {},
   logout: async () => {},
@@ -49,7 +50,7 @@ createRoot(document.getElementById('root')!).render(
               path="works/:id"
               element={
                 <SearchGate>
-                  <PendingWorkPage />
+                  <WorkPage />
                 </SearchGate>
               }
             />

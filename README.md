@@ -84,3 +84,15 @@ npm run test:discovery
 ```
 
 スマホ/iPad/PC相当の幅でChromium/WebKitを確認。tests/discovery-harness.htmlは模擬認証と模擬APIを使う**テスト専用入口**で、srcからimportせず通常buildへ含めない。通常buildの未ログイン検索でAPIを送らないことも検証する。実Google・実作品・実iPad等での受入の代わりではない。保護APIの応答をService Workerへ丸ごとキャッシュしない。
+
+## T09：作品詳細とPDF
+
+`src/features/works/WorkPage.tsx`が認証済み詳細と資料切替・共有・手動保存、`pdf-data.ts`が長さ/版/SHA照合、`PdfViewer.tsx`が1ページ表示・拡大・解放、`pdf-runtime.ts`がPDF.jsの遅延読込を担当します。公開契約は`src/contracts/documents.generated.ts`です。
+
+Mozilla公式pdfjs-dist6.4.299のlegacy build（Apache-2.0）を使用。SDKと専用Worker・補助資産は同じ版で同梱し、`scripts/copy-pdf-assets.mjs`で開発/ビルド前に生成します。外部CDNは使いません。生成先public/pdfjsは専用の出力先で、実作品を置かないでください。Welcome時に重いSDKをprecacheしません。公式のPDFエンジンSafari対応は18以降が対象（mostly）です。外枠の16.4 targetと同じ保証ではありません。旧端末/描画失敗時はPDF保存からOSで開く方法を案内し、学校iPadのOSと保存操作は実機受入が必要です。
+
+PDF APIはGoogle/学校資格と正本の公開状態を確認します。全量最大3,000,000 bytes、実体版・長さ・SHAを照合。資料表示済みのBlobを保存にも使い、直前HEADを通して二重GETを避けます。5秒以内の保存リンクをユーザーが押す方式で、保存後のOSファイルは72時間の自動削除対象外です。共有は作品URLだけで、共有先もログイン必須。
+
+`npm run test:pdf`は架空の縦/横2ページPDFをChromium/WebKitと3画面幅で検証します。実資料の任意ローカル受入は`TANKYU_PDF_PATH`を指定し、`--grep 実SSD --workers 1`で実行します。スクリーンショットは`TANKYU_PDF_SCREENSHOT`でGit外を指定します。作品をpublicやGitへコピーしません。通常buildにテスト認証入口がないことも検査します。
+
+T09はローカル受入まで。実Google/R2の配信、学校端末、実CPU/費用と一般公開は未受入。72時間の自動保存・オフライン資産準備はT10、本人閲覧状態は後続です。

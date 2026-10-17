@@ -17,3 +17,7 @@ if (process.env.VITE_ENABLE_PREVIEW === 'true') {
     }
   console.log('Production build excludes sample works');
 }
+
+const sw = await readFile('dist/sw.js', 'utf8');
+if (/pdf-runtime-|pdf\.worker|pdfjs\//.test(sw))
+  throw new Error('Heavy PDF engine must not be precached on Welcome');

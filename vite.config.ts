@@ -28,6 +28,7 @@ export default defineConfig(({ command, mode }) => {
         injectRegister: null,
         injectManifest: {
           globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'],
+          globIgnores: ['**/pdf-runtime-*.js', '**/pdf.worker*', 'pdfjs/**'],
           maximumFileSizeToCacheInBytes: 2000000,
         },
         manifest: {

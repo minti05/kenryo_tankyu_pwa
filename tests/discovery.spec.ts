@@ -34,6 +34,8 @@ async function fixture(page: Page) {
       body = { version: '1', items: history };
     } else if (url.pathname === '/api/discovery')
       body = { version: '1', items: [first], nextCursor: null };
+    else if (/^\/api\/works\/\d{8}$/.test(url.pathname))
+      body = { version: '1', work: first, documents: [], authorizedAt: new Date().toISOString() };
     else
       body = {
         version: '1',
@@ -102,7 +104,7 @@ test('KRGP条件と詳細から一覧へ戻る', async ({ page }) => {
     )
     .toBeTruthy();
   await page.getByRole('link', { name: '架空の水の探究の詳細' }).click();
-  await expect(page.getByText('資料を読む画面は準備中です。')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '架空の水の探究' })).toBeVisible();
   await page.getByRole('link', { name: '一覧へ戻る' }).click();
   await expect(page).toHaveURL(/award=2/);
 });

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
   BookOpen,
@@ -14,6 +14,14 @@ import styles from './WelcomePage.module.css';
 import { useAuth } from '../features/auth/context';
 export default function WelcomePage() {
   const { ready, configured, busy, error, session, signedIn, login, logout, retry } = useAuth();
+  const [params] = useSearchParams(),
+    requested = params.get('next'),
+    next =
+      requested &&
+      requested.length < 2000 &&
+      /^\/(works\/\d{8}|explore|awards)(\?|$)/.test(requested)
+        ? requested
+        : '/account';
   return (
     <div className="page-container">
       <section className={styles.hero}>
@@ -53,8 +61,8 @@ export default function WelcomePage() {
             </p>
             {error && <p role="alert">{error}</p>}
             {session && (
-              <Link className="button secondary" to="/account">
-                アカウントを確認
+              <Link className="button secondary" to={next}>
+                {next === '/account' ? 'アカウントを確認' : '続きのページを開く'}
               </Link>
             )}
             {signedIn && !session && !busy && (

@@ -2,7 +2,7 @@ import { CONTRACT_VERSION } from '../../contracts/work.generated';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { ApiError, createApiClient } from '../../lib/api-client';
+import { ApiError, createApiClient, createApiTransport } from '../../lib/api-client';
 import { initializeAuth, authConfigured } from './firebase';
 import { AuthContext, type Session } from './context';
 function message(error: unknown): string {
@@ -129,19 +129,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(message(caught));
     }
   }
-  async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  async function requestResponse(path: string, options: RequestInit = {}): Promise<Response> {
     const uid = session?.uid;
     if (!uid) throw new ApiError(401, 'authentication_required');
+    const ticket = generation.current;
     try {
-      const call = createApiClient(async () => {
+      const call = createApiTransport(async () => {
         const user = runtime.current?.auth.currentUser;
         if (user?.uid !== uid) return null;
         const token = await user.getIdToken();
         return runtime.current?.auth.currentUser?.uid === uid ? token : null;
       });
-      return await call<T>(path, options);
+      const result = await call(path, options);
+      if (generation.current !== ticket || runtime.current?.auth.currentUser?.uid !== uid) {
+        await result.body?.cancel();
+        throw new ApiError(0, 'session_changed');
+      }
+      return result;
     } catch (caught) {
-      if (caught instanceof ApiError && (caught.status === 401 || caught.status === 403)) {
+      if (
+        generation.current === ticket &&
+        runtime.current?.auth.currentUser?.uid === uid &&
+        caught instanceof ApiError &&
+        (caught.status === 401 || caught.status === 403)
+      ) {
         generation.current++;
         setSession(null);
         query.clear();
@@ -150,10 +161,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw caught;
     }
   }
+  async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+    const response = await requestResponse(path, options);
+    if (!response.headers.get('content-type')?.includes('application/json'))
+      throw new ApiError(response.status, 'invalid_response');
+    return response.json() as Promise<T>;
+  }
   return (
     <AuthContext.Provider
       value={{
         request,
+        requestResponse,
         ready,
         configured: authConfigured,
         busy,

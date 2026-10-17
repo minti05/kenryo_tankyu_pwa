@@ -11,6 +11,8 @@ export default tseslint.config(
       '.cache/**',
       'playwright-report/**',
       'test-results/**',
+      'test-results-pdf/**',
+      'public/pdfjs/**',
       'src/contracts/*.generated.ts',
     ],
   },
