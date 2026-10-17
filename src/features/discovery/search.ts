@@ -8,7 +8,9 @@ export const DOCUMENT_LABELS: Record<DocumentType, string> = {
 };
 export const categoryLabel = (id: string) =>
   CATEGORY_CATALOG.find((c) => c.id === id)?.label ?? 'その他';
-export function documentTypes(work: WorkDto): DocumentType[] {
+export function documentTypes(
+  work: Pick<WorkDto, 'existsPoster' | 'existsReport' | 'existsThesis' | 'existsSlide'>,
+): DocumentType[] {
   return (['poster', 'report', 'thesis', 'slide'] as const).filter(
     (kind) =>
       ({

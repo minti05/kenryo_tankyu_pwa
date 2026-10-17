@@ -129,9 +129,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(message(caught));
     }
   }
+  async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+    const uid = session?.uid;
+    if (!uid) throw new ApiError(401, 'authentication_required');
+    try {
+      const call = createApiClient(async () => {
+        const user = runtime.current?.auth.currentUser;
+        if (user?.uid !== uid) return null;
+        const token = await user.getIdToken();
+        return runtime.current?.auth.currentUser?.uid === uid ? token : null;
+      });
+      return await call<T>(path, options);
+    } catch (caught) {
+      if (caught instanceof ApiError && (caught.status === 401 || caught.status === 403)) {
+        generation.current++;
+        setSession(null);
+        query.clear();
+        setError(message(caught));
+      }
+      throw caught;
+    }
+  }
   return (
     <AuthContext.Provider
       value={{
+        request,
         ready,
         configured: authConfigured,
         busy,

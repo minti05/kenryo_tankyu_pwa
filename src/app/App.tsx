@@ -5,6 +5,9 @@ import { Layout } from './Layout';
 import { PREVIEW_ENABLED } from '../lib/environment';
 import WelcomePage from '../pages/WelcomePage';
 import { AuthProvider } from '../features/auth/AuthProvider';
+const SearchPage = lazy(() => import('../features/discovery/SearchPage'));
+const SearchGate = lazy(() => import('../features/auth/RequireSession'));
+const PendingWorkPage = lazy(() => import('../features/works/PendingWorkPage'));
 const AccountPage = lazy(() => import('../features/auth/AccountPage'));
 const AboutPage = lazy(() => import('../pages/AboutPage'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'));
@@ -55,6 +58,30 @@ export default function App() {
                 <Route element={<Layout />}>
                   <Route index element={<Navigate to="/welcome" replace />} />
                   <Route path="welcome" element={<WelcomePage />} />
+                  <Route
+                    path="explore"
+                    element={
+                      <SearchGate>
+                        <SearchPage />
+                      </SearchGate>
+                    }
+                  />
+                  <Route
+                    path="awards"
+                    element={
+                      <SearchGate>
+                        <SearchPage awards />
+                      </SearchGate>
+                    }
+                  />
+                  <Route
+                    path="works/:id"
+                    element={
+                      <SearchGate>
+                        <PendingWorkPage />
+                      </SearchGate>
+                    }
+                  />
                   <Route path="account" element={<AccountPage />} />
                   <Route path="about" element={<AboutPage />} />
                   {preview && (

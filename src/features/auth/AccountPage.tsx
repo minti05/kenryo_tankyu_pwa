@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from './context';
 export default function AccountPage() {
   const { session, busy, logout, error } = useAuth();
@@ -14,7 +14,10 @@ export default function AccountPage() {
       <span className="eyebrow">YOUR ACCOUNT</span>
       <h1>ログインできました。</h1>
       <p>学校アカウントと利用資格を確認しました。</p>
-      <p>作品の検索と閲覧は、次の工程で接続します。</p>
+      <p>先輩の問いを、キーワードやテーマから探してみましょう。</p>
+      <Link className="button primary" to="/explore">
+        作品を探す
+      </Link>
       {error && <p role="alert">{error}</p>}
       <button
         className="button secondary"

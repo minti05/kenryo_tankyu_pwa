@@ -7,7 +7,12 @@ if (process.env.VITE_ENABLE_PREVIEW === 'true') {
   for (const file of await readdir('dist/assets'))
     if (file.endsWith('.js')) {
       const text = await readFile(join('dist/assets', file), 'utf8');
-      if (text.includes('sample-work-') || text.includes('雨の日の通学路'))
+      if (
+        text.includes('fixture-token') ||
+        text.includes('discovery-harness') ||
+        text.includes('sample-work-') ||
+        text.includes('雨の日の通学路')
+      )
         throw new Error('Sample works leaked into production build');
     }
   console.log('Production build excludes sample works');

@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Compass, LibraryBig, Info, ArrowUpRight } from 'lucide-react';
+import { useAuth } from '../features/auth/context';
 import { Brand } from '../components/Brand';
 import { PwaNotice } from '../components/PwaNotice';
 export function Layout() {
+  const { session } = useAuth();
   const location = useLocation(),
     main = useRef<HTMLElement>(null),
     previous = useRef(location.pathname),
@@ -24,7 +26,7 @@ export function Layout() {
           <Brand />
           <nav
             aria-label="メインナビゲーション"
-            className={preview ? 'primary-nav' : 'primary-nav public-nav'}
+            className={preview || session ? 'primary-nav' : 'primary-nav public-nav'}
           >
             {preview && (
               <>
@@ -36,6 +38,16 @@ export function Layout() {
                   <LibraryBig size={18} />
                   ライブラリ
                 </NavLink>
+              </>
+            )}
+            {!preview && session && (
+              <>
+                <NavLink to="/explore">
+                  <Compass size={18} />
+                  見つける
+                </NavLink>
+                <NavLink to="/awards">KRGP</NavLink>
+                <NavLink to="/account">アカウント</NavLink>
               </>
             )}
             <NavLink to="/about">

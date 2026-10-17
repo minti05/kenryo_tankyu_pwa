@@ -18,7 +18,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test:production": "playwright test --config playwright.production.config.ts",
-    "test:auth-config": "node scripts/test-auth-config.mjs"
+    "test:auth-config": "node scripts/test-auth-config.mjs",
+    "test:discovery": "playwright test --config playwright.discovery.config.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "5.104.3",

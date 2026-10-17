@@ -72,3 +72,15 @@ Firebase SDKのブラウザ永続状態を使い、アプリ独自のトーク�
 `test:auth-config`は架空のFirebase公開設定で別の.cache/auth-buildを生成し、Chromium/WebKitでSDK初期化とボタン有効化を確認します。外部HTTPSを遮断し、実Googleログインは行いません。実端末のpopup/キャンセル・UID保持・資格停止・再ログインは検証環境での受入に残ります。
 
 Firebase13はNode24.12以上の要件があるため、Node22に対応する12系最新版12.19.0を固定しました。互換依存の解決でNode24要件のapp/app-compatが入らないよう同梱系列を固定し、未使用FirestoreのNode依存grpc-jsは同じmajorの修正版1.14.6へoverrideしています。ブラウザへFirestoreやgRPCはimportしません。SDK更新時はNode要件、overrideの除去可否、audit、ブラウザ動作を再確認してください。
+
+## 検索・探索・KRGP（T08）
+
+ログインと資格確認後、`/explore`で検索・正式分類2組/サブカテゴリ/年度/学科/資料種別・ページ送り、`/awards`でKRGPの賞・賞名を使う。URLに条件を保持し、`/works/:id?from=...`から一覧へ戻れる。PDF詳細はT09準備中。実一覧の保存/人気順を未接続のまま表示しない。
+
+主な変更先はsrc/features/discovery/SearchPage.tsx、LiveWorkCard.tsx、src/contracts/discovery.generated.ts。AuthProviderのrequestが現在のUIDのトークンを付け、本人別のquery keyとログアウト時clearで状態を分離する。結果を長期キャッシュせず、検索語の入力中にAPI履歴を保存しない。履歴削除は個別/全件に対応し、全件だけ確認する。
+
+```bash
+npm run test:discovery
+```
+
+スマホ/iPad/PC相当の幅でChromium/WebKitを確認。tests/discovery-harness.htmlは模擬認証と模擬APIを使う**テスト専用入口**で、srcからimportせず通常buildへ含めない。通常buildの未ログイン検索でAPIを送らないことも検証する。実Google・実作品・実iPad等での受入の代わりではない。保護APIの応答をService Workerへ丸ごとキャッシュしない。

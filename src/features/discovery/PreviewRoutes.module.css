@@ -533,3 +533,29 @@
   flex-wrap: wrap;
   overflow: visible;
 }
+.liveFilters select,
+.liveFilters input {
+  min-height: 44px;
+  max-width: 100%;
+  font: inherit;
+  font-size: 0.8125rem;
+}
+.liveFilters input {
+  width: 170px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--surface);
+}
+@media (max-width: 600px) {
+  .liveFilters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .liveFilters label,
+  .liveFilters select,
+  .liveFilters input {
+    width: 100%;
+    min-width: 0;
+  }
+}

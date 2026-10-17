@@ -568,3 +568,24 @@ main:focus {
     scroll-behavior: auto !important;
   }
 }
+.history-list {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 20px;
+}
+.history-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.history-list a {
+  padding: 14px 0;
+  overflow-wrap: anywhere;
+}
+.history-list button {
+  min-width: 52px;
+  min-height: 44px;
+  flex-shrink: 0;
+}
