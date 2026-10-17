@@ -1,7 +1,10 @@
 import { createContext, useContext } from 'react';
+import type { CacheSession } from '../offline/store';
 import type { SessionDto } from '../../contracts/session.generated';
 export type Session = SessionDto;
 export interface AuthState {
+  offline: boolean;
+  cacheSession: CacheSession | null;
   requestResponse: (path: string, options?: RequestInit) => Promise<Response>;
   request: <T>(path: string, options?: RequestInit) => Promise<T>;
   ready: boolean;

@@ -18,6 +18,7 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium webkit
       - run: npm test
+      - run: npm run test:offline
       - run: npm run test:pdf
       - run: npm run test:discovery
       - run: npm run test:production

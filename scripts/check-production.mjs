@@ -9,6 +9,8 @@ if (process.env.VITE_ENABLE_PREVIEW === 'true') {
       const text = await readFile(join('dist/assets', file), 'utf8');
       if (
         text.includes('fixture-token') ||
+        text.includes('offline-fixture-user') ||
+        text.includes('offlineFixtureStore') ||
         text.includes('discovery-harness') ||
         text.includes('sample-work-') ||
         text.includes('雨の日の通学路')
@@ -19,5 +21,9 @@ if (process.env.VITE_ENABLE_PREVIEW === 'true') {
 }
 
 const sw = await readFile('dist/sw.js', 'utf8');
-if (/pdf-runtime-|pdf\.worker|pdfjs\//.test(sw))
+if (
+  [...sw.matchAll(/url:["']([^"']+)["']/g)].some((m) =>
+    /pdf-runtime-|pdf\.worker|pdfjs\//.test(m[1]),
+  )
+)
   throw new Error('Heavy PDF engine must not be precached on Welcome');

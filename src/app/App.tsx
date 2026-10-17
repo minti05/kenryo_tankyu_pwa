@@ -5,6 +5,7 @@ import { Layout } from './Layout';
 import { PREVIEW_ENABLED } from '../lib/environment';
 import WelcomePage from '../pages/WelcomePage';
 import { AuthProvider } from '../features/auth/AuthProvider';
+const SavedPage = lazy(() => import('../features/offline/SavedPage'));
 const SearchPage = lazy(() => import('../features/discovery/SearchPage'));
 const SearchGate = lazy(() => import('../features/auth/RequireSession'));
 const WorkPage = lazy(() => import('../features/works/WorkPage'));
@@ -79,6 +80,14 @@ export default function App() {
                     element={
                       <SearchGate>
                         <WorkPage />
+                      </SearchGate>
+                    }
+                  />
+                  <Route
+                    path="saved"
+                    element={
+                      <SearchGate>
+                        <SavedPage />
                       </SearchGate>
                     }
                   />

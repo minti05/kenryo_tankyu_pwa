@@ -1,3 +1,7 @@
+import OfflineWorkPage from '../offline/OfflineWorkPage';
+import { deleteSaved, listSaved, readSaved, saveViewed, type CacheSession } from '../offline/store';
+import { preparePdfAssets } from '../offline/assets';
+import type { SearchWorkDto } from '../../contracts/discovery.generated';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -46,16 +50,40 @@ function validDetail(data: WorkDetailDto, id: string) {
   return data;
 }
 export default function WorkPage() {
+  const { offline } = useAuth();
+  return offline ? <OfflineWorkPage /> : <OnlineWorkPage />;
+}
+function OnlineWorkPage() {
   const { id = '' } = useParams(),
     [params, setParams] = useSearchParams(),
-    { session, request } = useAuth(),
+    { session, request, cacheSession } = useAuth(),
     [shareStatus, setShareStatus] = useState(''),
     [manualCopy, setManualCopy] = useState('');
   const detail = useQuery({
     queryKey: ['work', session?.uid, id],
     enabled: !!session && /^\d{8}$/.test(id),
-    queryFn: async ({ signal }) =>
-      validDetail(await request<WorkDetailDto>('/api/works/' + id, { signal }), id),
+    queryFn: async ({ signal }) => {
+      const data = validDetail(
+        await request<WorkDetailDto>('/api/works/' + id, { signal }).catch(async (e) => {
+          if (e instanceof ApiError && e.status === 404 && cacheSession)
+            await deleteSaved(cacheSession, id).catch(() => {});
+          throw e;
+        }),
+        id,
+      );
+      if (cacheSession)
+        for (const row of await listSaved(cacheSession).catch(() => [])) {
+          if (
+            row.id === id &&
+            !data.documents.some(
+              (doc) =>
+                doc.kind === row.kind && doc.state === 'available' && doc.revision === row.revision,
+            )
+          )
+            await deleteSaved(cacheSession, id, row.kind).catch(() => {});
+        }
+      return data;
+    },
     staleTime: 0,
     gcTime: 0,
     refetchOnWindowFocus: true,
@@ -167,6 +195,7 @@ export default function WorkPage() {
             key={`${session!.uid}:${id}:${selected.kind}:${selected.revision}`}
             id={id}
             title={work.title}
+            work={work}
             document={selected}
             onRefresh={() => void detail.refetch()}
           />
@@ -180,15 +209,20 @@ export default function WorkPage() {
 function DocumentPane({
   id,
   title,
+  work,
   document: doc,
   onRefresh,
 }: {
   id: string;
   title: string;
+  work: SearchWorkDto;
   document: WorkDocumentDto;
   onRefresh: () => void;
 }) {
-  const { requestResponse } = useAuth(),
+  const { requestResponse, cacheSession, session } = useAuth(),
+    [savedMessage, setSavedMessage] = useState(''),
+    saved = useRef(false),
+    owner = useRef<{ cache: CacheSession; session: NonNullable<typeof session> } | null>(null),
     request = useRef(requestResponse),
     [data, setData] = useState<(PdfData & { url: string }) | null>(null),
     [error, setError] = useState(''),
@@ -199,6 +233,9 @@ function DocumentPane({
   const prepared = useRef(0),
     alive = useRef(true),
     path = `/api/works/${id}/pdf/${doc.kind}?revision=${doc.revision}`;
+  useEffect(() => {
+    owner.current = cacheSession && session ? { cache: cacheSession, session } : null;
+  }, [cacheSession, session]);
   useEffect(() => {
     request.current = requestResponse;
   }, [requestResponse]);
@@ -214,25 +251,83 @@ function DocumentPane({
     let objectUrl: string | undefined;
     void (async () => {
       try {
-        const response = await request.current(path, {
+        const startedMono = performance.now();
+        const cached = owner.current
+          ? await readSaved(owner.current.cache, id, doc.kind, doc.revision!).catch(() => null)
+          : null;
+        let pdf: PdfData;
+        if (cached) {
+          const head = await request.current(path, {
+            method: 'HEAD',
             signal: controller.signal,
             headers: { Accept: 'application/pdf' },
-          }),
-          pdf = await readPdfResponse(response, { bytes: doc.bytes!, revision: doc.revision! });
+          });
+          if (
+            head.headers.get('X-Document-Revision') !== cached.revision ||
+            Number(head.headers.get('Content-Length')) !== cached.bytes ||
+            (head.headers.get('X-Content-SHA256') &&
+              head.headers.get('X-Content-SHA256') !== cached.sha256) ||
+            !Number.isFinite(Date.parse(head.headers.get('X-Authorized-At') ?? ''))
+          )
+            throw new ApiError(409, 'document_changed');
+          pdf = {
+            blob: cached.blob,
+            revision: cached.revision,
+            sha256: cached.sha256,
+            authorizedAt: head.headers.get('X-Authorized-At')!,
+            receivedMono: startedMono,
+          };
+        } else {
+          const response = await request.current(path, {
+            signal: controller.signal,
+            headers: { Accept: 'application/pdf' },
+          });
+          pdf = await readPdfResponse(response, {
+            bytes: doc.bytes!,
+            revision: doc.revision!,
+            startedMono,
+          });
+        }
         if (!controller.signal.aborted) {
           objectUrl = URL.createObjectURL(pdf.blob);
           setData({ ...pdf, url: objectUrl });
           setError('');
         }
       } catch (e) {
-        if (!controller.signal.aborted) setError(message(e));
+        if (!controller.signal.aborted) {
+          if (owner.current && e instanceof ApiError && [404, 409, 413, 422].includes(e.status))
+            await deleteSaved(owner.current.cache, id, doc.kind).catch(() => {});
+          setError(message(e));
+        }
       }
     })();
     return () => {
       controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [doc.bytes, doc.revision, doc.state, path, retry]);
+  }, [doc.bytes, doc.revision, doc.state, doc.kind, id, path, retry]);
+  async function onViewed() {
+    setViewed(true);
+    if (saved.current || !data || !owner.current) return;
+    saved.current = true;
+    const identity = owner.current;
+    setSavedMessage('この端末でオフラインでも開けるように準備しています…');
+    try {
+      await saveViewed(identity.cache, identity.session, work, doc.kind, data);
+      try {
+        await preparePdfAssets();
+        if (alive.current) setSavedMessage('この端末に3日間保存しました。');
+      } catch {
+        if (alive.current)
+          setSavedMessage(
+            'PDFは端末内に保存しました。オフライン表示用の準備が完了していません。通信に接続して、もう一度開いてください。',
+          );
+      }
+    } catch {
+      if (alive.current)
+        setSavedMessage('この端末に保存できませんでした。オンラインでは引き続き閲覧できます。');
+    }
+  }
   async function prepare() {
     if (!data || saveState === 'checking') return;
     setSaveState('checking');
@@ -302,7 +397,7 @@ function DocumentPane({
       </p>
       {data ? (
         <Suspense fallback={<p role="status">PDFビューアを準備しています…</p>}>
-          <PdfViewer blob={data.blob} onReady={() => setViewed(true)} />
+          <PdfViewer blob={data.blob} onReady={() => void onViewed()} />
         </Suspense>
       ) : (
         <p role="status">PDFを取得しています…</p>
@@ -312,7 +407,10 @@ function DocumentPane({
         <p>
           ダウンロードしたPDFは3日後も自動削除されません。学校の利用規約を守り、再配布や個人情報の扱いにご注意ください。
         </p>
-        <p>アプリ内でのオフライン閲覧は準備中です。</p>
+        <p>
+          アプリ内の保存は、オンラインで閲覧した時点から3日間です。オフラインで開いても期限は延びません。
+        </p>
+        {savedMessage && <p role="status">{savedMessage}</p>}
         <button
           className="button primary"
           disabled={!data || saveState === 'checking'}

@@ -19,7 +19,7 @@ export default function WelcomePage() {
     next =
       requested &&
       requested.length < 2000 &&
-      /^\/(works\/\d{8}|explore|awards)(\?|$)/.test(requested)
+      /^\/(works\/\d{8}|explore|awards|saved)(\?|$)/.test(requested)
         ? requested
         : '/account';
   return (

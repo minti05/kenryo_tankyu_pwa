@@ -96,3 +96,19 @@ PDF APIはGoogle/学校資格と正本の公開状態を確認します。全量
 `npm run test:pdf`は架空の縦/横2ページPDFをChromium/WebKitと3画面幅で検証します。実資料の任意ローカル受入は`TANKYU_PDF_PATH`を指定し、`--grep 実SSD --workers 1`で実行します。スクリーンショットは`TANKYU_PDF_SCREENSHOT`でGit外を指定します。作品をpublicやGitへコピーしません。通常buildにテスト認証入口がないことも検査します。
 
 T09はローカル受入まで。実Google/R2の配信、学校端末、実CPU/費用と一般公開は未受入。72時間の自動保存・オフライン資産準備はT10、本人閲覧状態は後続です。
+
+## T10：3日間の保存とオフライン
+
+オンラインで閲覧できた資料だけを、この端末へ72時間保存します。`/saved`に件数・PDF容量・期限・残り時間を表示し、個別/全件/期間で削除できます。オフライン閲覧で期限は延びず、手動ダウンロードしたOSのファイルは自動削除できません。
+
+`src/features/offline/store.ts`がIndexedDB・本人・期限・容量（PDF本体100MiB）・SHA照合を所有します。WebKit互換のためPDF本体はArrayBufferで保存し、使用時にBlobへ戻します。`SavedPage.tsx`と`OfflineWorkPage.tsx`が画面、`assets.ts`と`src/sw/pdf-assets.ts`が固定SDKの明示保存、`src/sw/expiry.ts`がSW側掃除です。
+
+Firebase永続状態の同じUIDと前回の認可が期限内の場合だけオフラインへ復帰します。初回オフラインログインや新しい検索・未保存資料の取得はできません。オンラインでは資格APIを必ず確認し、403/401・ログアウト・利用者切替で保存を消します。別タブと遅い保存もepoch/fenceで無効にします。オンラインで再閲覧した同じ版は、HEADで再認可して保存データを再利用します。
+
+時刻はサーバー認可時刻と経過時間を基準にし、60秒超の巻戻しではオフライン利用を止めます。期限後は読み取りを拒否し、起動・復帰・定期・使用時に削除します。閉じたまま期限ちょうどに物理削除することや、通信断中の管理者失効の即時反映はできません。ブラウザの空き容量/プライベートモード/サイトデータ削除でも保存が失われます。
+
+表示SDKは最初の閲覧後に203ファイル/約5.34MBを明示準備し、PDF本体とは別の公開資産cacheへ保存します。準備未完了や容量不足は画面で案内し、オンライン表示は継続します。保護API/PDFをService Workerで包括cacheしません。
+
+`npm run test:offline`は`.cache/offline-build`へ隔離した試験ビルドです。実AuthProvider/IndexedDB/SW/PDF.jsを使い、Firebaseの状態とHTTP応答だけを架空のfixtureに置換します。`TANKYU_OFFLINE_TEST_BUILD=1`はこの出力先以外では拒否します。通常buildは本来のFirebase SDKのまま、fixtureの漏れを検査します。試験ビルドを公開しないでください。
+
+学校の実端末・実Firebase/R2・HTTPSでの保存/再起動・低容量・長時間休止・SW更新の受入は別途必要です。実サービスの一般公開はまだ行っていません。通知と本人のクラウド閲覧状態は後続です。

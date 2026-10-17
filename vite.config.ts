@@ -1,5 +1,9 @@
+import { offlineApi } from './tests/offline-api.mjs';
 import { defineConfig, loadEnv } from 'vite';
 import { fileURLToPath } from 'node:url';
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { join } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(({ command, mode }) => {
@@ -19,6 +23,54 @@ export default defineConfig(({ command, mode }) => {
       },
     },
     plugins: [
+      ...(process.env.TANKYU_OFFLINE_TEST_BUILD === '1' ? [offlineApi()] : []),
+      ...(process.env.TANKYU_OFFLINE_TEST_BUILD === '1'
+        ? [
+            {
+              name: 'offline-test-auth-only',
+              enforce: 'pre' as const,
+              configResolved(config: import('vite').ResolvedConfig) {
+                if (config.build.outDir !== '.cache/offline-build')
+                  throw new Error('Fixture auth is restricted to .cache/offline-build');
+              },
+              resolveId(source: string, importer: string | undefined) {
+                if (
+                  importer?.endsWith('/features/auth/AuthProvider.tsx') &&
+                  source === './firebase'
+                )
+                  return fileURLToPath(new URL('./tests/offline-firebase.ts', import.meta.url));
+              },
+            },
+          ]
+        : []),
+      {
+        name: 'pdf-offline-manifest',
+        writeBundle(options, bundle) {
+          if (!Object.keys(bundle).some((name) => /^assets\/pdf-runtime-/.test(name))) return;
+          const files: { url: string; size: number; sha256: string }[] = [];
+          const add = (url: string, bytes: Uint8Array | string) =>
+            files.push({
+              url,
+              size: Buffer.byteLength(bytes),
+              sha256: createHash('sha256').update(bytes).digest('hex'),
+            });
+          for (const name of Object.keys(bundle))
+            if (/^assets\/(pdf-runtime-|pdf\.worker)/.test(name))
+              add('/' + name, readFileSync(join(options.dir!, name)));
+          function walk(dir: string) {
+            for (const entry of readdirSync(dir, { withFileTypes: true })) {
+              const path = join(dir, entry.name);
+              if (entry.isDirectory()) walk(path);
+              else add('/' + path.replace(/^public\//, ''), readFileSync(path));
+            }
+          }
+          walk('public/pdfjs/6.4.299');
+          writeFileSync(
+            join(options.dir!, 'pdf-offline-manifest.json'),
+            JSON.stringify({ version: '1', files }),
+          );
+        },
+      },
       react(),
       VitePWA({
         strategies: 'injectManifest',

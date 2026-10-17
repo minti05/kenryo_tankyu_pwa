@@ -5,7 +5,7 @@ import { useAuth } from '../features/auth/context';
 import { Brand } from '../components/Brand';
 import { PwaNotice } from '../components/PwaNotice';
 export function Layout() {
-  const { session } = useAuth();
+  const { session, offline } = useAuth();
   const location = useLocation(),
     main = useRef<HTMLElement>(null),
     previous = useRef(location.pathname),
@@ -47,6 +47,7 @@ export function Layout() {
                   見つける
                 </NavLink>
                 <NavLink to="/awards">KRGP</NavLink>
+                <NavLink to="/saved">端末の保存</NavLink>
                 <NavLink to="/account">アカウント</NavLink>
               </>
             )}
@@ -72,6 +73,11 @@ export function Layout() {
             <ArrowUpRight size={13} />
           </Link>
         </div>
+      )}
+      {offline && (
+        <aside className="offline-banner" role="status">
+          オフラインで利用中 · <Link to="/saved">端末の保存を開く</Link>
+        </aside>
       )}
       <main id="main" tabIndex={-1} ref={main}>
         <Outlet />

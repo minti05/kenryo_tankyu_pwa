@@ -20,7 +20,9 @@
     "test:production": "playwright test --config playwright.production.config.ts",
     "test:auth-config": "node scripts/test-auth-config.mjs",
     "test:discovery": "playwright test --config playwright.discovery.config.ts",
-    "test:pdf": "playwright test --config playwright.pdf.config.ts"
+    "test:pdf": "playwright test --config playwright.pdf.config.ts",
+    "test:offline": "playwright test --config playwright.offline.config.ts",
+    "test:offline:serve": "node scripts/offline-test-server.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "5.104.3",

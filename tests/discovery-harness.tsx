@@ -11,6 +11,8 @@ import WorkPage from '../src/features/works/WorkPage';
 import '../src/styles/global.css';
 const entry = new URL(location.href).searchParams.get('entry') ?? '/explore';
 const auth: AuthState = {
+  offline: false,
+  cacheSession: null,
   ready: true,
   configured: true,
   busy: false,

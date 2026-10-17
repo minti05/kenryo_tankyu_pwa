@@ -10,3 +10,4 @@ package-lock.json
 public/pdfjs
 
 test-results-pdf
+test-results-offline

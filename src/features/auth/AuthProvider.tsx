@@ -1,3 +1,13 @@
+import {
+  forgetOtherUser,
+  activateCache,
+  cacheIsCurrent,
+  resumeCache,
+  revokeCache,
+  subscribeCache,
+  sweepExpired,
+  type CacheSession,
+} from '../offline/store';
 import { CONTRACT_VERSION } from '../../contracts/work.generated';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
@@ -31,7 +41,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [session, setSession] = useState<Session | null>(null),
-    [signedIn, setSignedIn] = useState(false);
+    [signedIn, setSignedIn] = useState(false),
+    [offline, setOffline] = useState(false),
+    [cacheSession, setCacheSession] = useState<CacheSession | null>(null);
   const runtime = useRef<Awaited<ReturnType<typeof initializeAuth>> | null>(null),
     generation = useRef(0);
   const checkRef = useRef<() => Promise<void>>(async () => {});
@@ -47,16 +59,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const check = async () => {
           const ticket = ++generation.current;
           setSession(null);
+          setCacheSession(null);
+          setOffline(false);
           query.clear();
           const user = value.auth.currentUser;
           setSignedIn(!!user);
           if (!user) {
+            await revokeCache().catch(() => {});
             setBusy(false);
             return;
           }
           setError('');
           setBusy(true);
           try {
+            await forgetOtherUser(user.uid).catch(() => {});
+            if (!navigator.onLine) {
+              const google = user.providerData.some((p) => p.providerId === 'google.com');
+              const saved =
+                google && user.emailVerified && user.email?.endsWith('@kenryo.ed.jp')
+                  ? await resumeCache(user.uid)
+                  : null;
+              if (!disposed && generation.current === ticket) {
+                if (saved) {
+                  setSession(saved.session);
+                  setCacheSession(saved.cacheSession);
+                  setOffline(true);
+                } else
+                  setError(
+                    'オフラインで開ける保存資料がありません。通信に接続してログインしてください。',
+                  );
+              }
+              return;
+            }
             const request = createApiClient(async () => {
               const token = await user.getIdToken();
               return value.auth.currentUser?.uid === user.uid ? token : null;
@@ -77,11 +111,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               !disposed &&
               generation.current === ticket &&
               value.auth.currentUser?.uid === user.uid
-            )
-              setSession(data as Session);
+            ) {
+              const cache = await activateCache(user.uid).catch(() => null);
+              if (
+                !disposed &&
+                generation.current === ticket &&
+                value.auth.currentUser?.uid === user.uid
+              ) {
+                setSession(data as Session);
+                setCacheSession(cache);
+                setOffline(false);
+              }
+            }
           } catch (caught) {
             if (!disposed && generation.current === ticket) {
               setError(message(caught));
+              if (caught instanceof ApiError && [401, 403].includes(caught.status))
+                await revokeCache().catch(() => {});
               if (caught instanceof ApiError && caught.status === 401)
                 await value.sdk.signOut(value.auth);
             }
@@ -100,7 +146,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setReady(false);
         }
       });
+    const changed = () => {
+      void checkRef.current();
+    };
+    window.addEventListener('online', changed);
+    window.addEventListener('offline', changed);
     return () => {
+      window.removeEventListener('online', changed);
+      window.removeEventListener('offline', changed);
       disposed = true;
       unsubscribe();
       runtime.current = null;
@@ -120,8 +173,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function logout() {
     generation.current++;
     setSession(null);
+    setCacheSession(null);
+    setOffline(false);
     query.clear();
     setError('');
+    await revokeCache().catch(() =>
+      setError('端末の保存を削除できませんでした。ブラウザのサイトデータも削除してください。'),
+    );
     try {
       if (runtime.current) await runtime.current.sdk.signOut(runtime.current.auth);
       setSignedIn(false);
@@ -130,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
   async function requestResponse(path: string, options: RequestInit = {}): Promise<Response> {
+    if (offline || !navigator.onLine) throw new ApiError(0, 'offline');
     const uid = session?.uid;
     if (!uid) throw new ApiError(401, 'authentication_required');
     const ticket = generation.current;
@@ -155,6 +214,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ) {
         generation.current++;
         setSession(null);
+        setCacheSession(null);
+        setOffline(false);
+        await revokeCache().catch(() => {});
         query.clear();
         setError(message(caught));
       }
@@ -167,11 +229,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new ApiError(response.status, 'invalid_response');
     return response.json() as Promise<T>;
   }
+  useEffect(() => {
+    const cleanup = () => {
+      void sweepExpired().catch(() => {});
+    };
+    const check = () => {
+      if (cacheSession)
+        void (offline ? resumeCache(cacheSession.uid).then(Boolean) : cacheIsCurrent(cacheSession))
+          .then((ok) => {
+            if (!ok) {
+              generation.current++;
+              setSession(null);
+              setCacheSession(null);
+              query.clear();
+              setOffline(false);
+            }
+          })
+          .catch(() => {});
+    };
+    const unsubscribe = subscribeCache(check);
+    const timer = setInterval(() => {
+      cleanup();
+      check();
+    }, 30000);
+    cleanup();
+    window.addEventListener('focus', cleanup);
+    document.addEventListener('visibilitychange', cleanup);
+    return () => {
+      unsubscribe();
+      clearInterval(timer);
+      window.removeEventListener('focus', cleanup);
+      document.removeEventListener('visibilitychange', cleanup);
+    };
+  }, [cacheSession, query, offline]);
   return (
     <AuthContext.Provider
       value={{
         request,
         requestResponse,
+        offline,
+        cacheSession,
         ready,
         configured: authConfigured,
         busy,

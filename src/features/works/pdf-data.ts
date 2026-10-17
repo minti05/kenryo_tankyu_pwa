@@ -4,11 +4,13 @@ export interface PdfData {
   sha256: string;
   revision: string;
   authorizedAt: string;
+  receivedMono: number;
 }
 export async function readPdfResponse(
   response: Response,
-  expected: { bytes: number; revision: string },
+  expected: { bytes: number; revision: string; startedMono?: number },
 ): Promise<PdfData> {
+  const receivedMono = expected.startedMono ?? performance.now();
   if (
     response.headers.get('Content-Type')?.split(';')[0] !== 'application/pdf' ||
     response.headers.get('X-Document-Revision') !== expected.revision ||
@@ -59,6 +61,7 @@ export async function readPdfResponse(
     sha256,
     revision: expected.revision,
     authorizedAt,
+    receivedMono,
   };
 }
 export function safePdfName(id: string, kind: string, title: string) {

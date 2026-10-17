@@ -589,3 +589,37 @@ main:focus {
   min-height: 44px;
   flex-shrink: 0;
 }
+
+.offline-banner {
+  padding: 12px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+  font-size: 0.875rem;
+}
+.saved-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+.saved-list li {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+.saved-list li > a {
+  font-weight: 700;
+}
+.reading-page input[type='date'] {
+  font: inherit;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface);
+}

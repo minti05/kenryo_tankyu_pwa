@@ -17,6 +17,20 @@ function failure(e: unknown) {
     : '読み込めませんでした。通信を確認して、もう一度お試しください。';
 }
 export default function SearchPage({ awards = false }: { awards?: boolean }) {
+  const { offline } = useAuth();
+  return offline ? (
+    <div className="page-container empty-state">
+      <h1>オフラインです</h1>
+      <p>新しい作品を探すには通信に接続してください。保存済み資料は期限内なら開けます。</p>
+      <Link className="button primary" to="/saved">
+        端末の保存を開く
+      </Link>
+    </div>
+  ) : (
+    <OnlineSearchPage awards={awards} />
+  );
+}
+function OnlineSearchPage({ awards = false }: { awards?: boolean }) {
   const { session, request } = useAuth(),
     queryClient = useQueryClient(),
     [params, setParams] = useSearchParams(),
