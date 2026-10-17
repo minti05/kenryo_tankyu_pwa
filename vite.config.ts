@@ -47,6 +47,7 @@ export default defineConfig(({ command, mode }) => {
         devOptions: { enabled: false },
       }),
     ],
+    server: { proxy: { '/api': 'http://127.0.0.1:8787' } },
     build: { target: ['es2022', 'safari16.4'], sourcemap: false },
   };
 });

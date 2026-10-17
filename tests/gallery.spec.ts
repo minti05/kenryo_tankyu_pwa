@@ -150,3 +150,34 @@ test('全テーマを展開して横スクロールなしで選べる', async ({
   await page.getByRole('button', { name: 'その他', exact: true }).click();
   await expect(page).toHaveURL(/category=other/);
 });
+
+test('ログインしていない場合はアカウント画面に入れない', async ({ page }) => {
+  await page.goto('/account');
+  await expect(page).toHaveURL(/\/welcome$/);
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('先輩の問いから');
+});
+test('通信入口はパスの迂回を拒否し、APIの認可エラーを保持する', async ({ page }) => {
+  await page.route('**/api/probe', (route) =>
+    route.fulfill({
+      status: 403,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: { code: 'membership_required' } }),
+    }),
+  );
+  await page.goto('/welcome');
+  const result = await page.evaluate(async () => {
+    const path = '/src/lib/api-client.ts';
+    const { createApiClient } = await import(/* @vite-ignore */ path);
+    const request = createApiClient(async () => 'fixture-token');
+    const errors: string[] = [];
+    for (const url of ['/api/../welcome', '/api/%2e%2e/welcome', '/api/probe']) {
+      try {
+        await request(url);
+      } catch (error) {
+        errors.push((error as Error).message);
+      }
+    }
+    return errors;
+  });
+  expect(result).toEqual(['invalid_api_path', 'invalid_api_path', 'membership_required']);
+});

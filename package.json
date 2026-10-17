@@ -17,10 +17,12 @@
     "test:report": "playwright show-report",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:production": "playwright test --config playwright.production.config.ts"
+    "test:production": "playwright test --config playwright.production.config.ts",
+    "test:auth-config": "node scripts/test-auth-config.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "5.104.3",
+    "firebase": "12.19.0",
     "lucide-react": "1.58.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
@@ -44,5 +46,10 @@
     "vite-plugin-pwa": "2.0.0",
     "workbox-precaching": "7.4.1",
     "workbox-routing": "7.4.1"
+  },
+  "overrides": {
+    "@firebase/app": "0.16.2",
+    "@firebase/app-compat": "0.5.18",
+    "@grpc/grpc-js": "1.14.6"
   }
 }

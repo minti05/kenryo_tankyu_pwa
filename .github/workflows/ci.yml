@@ -19,3 +19,4 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - run: npm test
       - run: npm run test:production
+      - run: npm run test:auth-config

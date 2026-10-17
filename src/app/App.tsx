@@ -4,6 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Layout } from './Layout';
 import { PREVIEW_ENABLED } from '../lib/environment';
 import WelcomePage from '../pages/WelcomePage';
+import { AuthProvider } from '../features/auth/AuthProvider';
+const AccountPage = lazy(() => import('../features/auth/AccountPage'));
 const AboutPage = lazy(() => import('../pages/AboutPage'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'));
 const preview = PREVIEW_ENABLED
@@ -39,33 +41,36 @@ class PageBoundary extends Component<{ children: ReactNode }, { failed: boolean 
 export default function App() {
   return (
     <QueryClientProvider client={client}>
-      <BrowserRouter>
-        <PageBoundary>
-          <Suspense
-            fallback={
-              <div className="loading-state" role="status">
-                画面を読み込んでいます…
-              </div>
-            }
-          >
-            <Routes>
-              <Route element={<Layout />}>
-                <Route index element={<Navigate to="/welcome" replace />} />
-                <Route path="welcome" element={<WelcomePage />} />
-                <Route path="about" element={<AboutPage />} />
-                {preview && (
-                  <Route path="preview" element={<preview.Frame />}>
-                    <Route path="explore" element={<preview.Explore />} />
-                    <Route path="library" element={<preview.Library />} />
-                    <Route path="works/:id" element={<preview.Work />} />
-                  </Route>
-                )}
-                <Route path="*" element={<NotFoundPage />} />
-              </Route>
-            </Routes>
-          </Suspense>
-        </PageBoundary>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <PageBoundary>
+            <Suspense
+              fallback={
+                <div className="loading-state" role="status">
+                  画面を読み込んでいます…
+                </div>
+              }
+            >
+              <Routes>
+                <Route element={<Layout />}>
+                  <Route index element={<Navigate to="/welcome" replace />} />
+                  <Route path="welcome" element={<WelcomePage />} />
+                  <Route path="account" element={<AccountPage />} />
+                  <Route path="about" element={<AboutPage />} />
+                  {preview && (
+                    <Route path="preview" element={<preview.Frame />}>
+                      <Route path="explore" element={<preview.Explore />} />
+                      <Route path="library" element={<preview.Library />} />
+                      <Route path="works/:id" element={<preview.Work />} />
+                    </Route>
+                  )}
+                  <Route path="*" element={<NotFoundPage />} />
+                </Route>
+              </Routes>
+            </Suspense>
+          </PageBoundary>
+        </BrowserRouter>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

@@ -2,7 +2,7 @@
 
 長野県松本県ケ丘高等学校の生徒向けに、先輩の探究作品を発見するWebアプリ。Vite＋React＋TypeScript、既存イラスト、ゴシック体で実装しています。
 
-T04ではWelcome、ギャラリー、作品詳細の見本、ライブラリの見本、端末に応じた外枠、PWAの画面キャッシュまで完成しています。Google認証・実作品検索・PDF・72時間保存・通知は後続工程です。通常の本番buildではサンプル画面を含めず、ログインボタンは準備中と表示します。まだ生徒向けに公開できる完成状態ではありません。
+T04ではWelcome、ギャラリー、作品詳細の見本、ライブラリの見本、端末に応じた外枠、PWAの画面キャッシュまで完成しています。T05でGoogle専用ログインとAPIの学校資格確認を接続しました。実クラウド設定は未投入で、実作品検索・PDF・72時間保存・通知は後続工程です。通常の本番buildではサンプル画面を含めず、接続設定がない場合のログインボタンは準備中と表示します。まだ生徒向けに公開できる完成状態ではありません。
 
 ## 起動・確認
 
@@ -23,6 +23,7 @@ npm run build
 npx playwright install chromium webkit
 npm test
 npm run test:production
+npm run test:auth-config
 ```
 
 `npm test`は開発画面を4173、`test:production`はbuild済み画面を4174で起動します。CIではブラウザのOS依存物もインストールします。テストはChromium/WebKit、360/820/1280px、分割表示、文字200%、キーボード、ダークモード、外枠のオフラインを検証します。実iPad・実スマホ・実FCMの動作保証ではありません。macOS Safari既定のリンク巡回はOption＋Tabです。
@@ -39,6 +40,7 @@ npm run preview -- --port 4174
 | ------------------------ | ------------------------------------------ |
 | `src/app`                | 入口・ルート・共通ヘッダーとナビゲーション |
 | `src/pages`              | Welcome・ご案内・未定義ページ              |
+| `src/features/auth`      | Google認証・資格照合・アカウント画面       |
 | `src/features/discovery` | サンプル検索・テーマ・作品カード・詳細     |
 | `src/features/library`   | プレビュー用の一時保存状態                 |
 | `src/components`         | ロゴ・カテゴリ画像・PWA更新案内            |
@@ -55,6 +57,18 @@ npm run preview -- --port 4174
 
 親のprivateコードや管理用環境変数をimportせず、このフォルダだけでinstall/buildできます。`npm run contracts:check`は同梱manifestのSHA-256を照合し、build時にも必ず実行します。生成物を手で修正せず、管理側の所有者が契約を更新してアプリへ出力し、両リポジトリをコミットします。同梱hashの確認だけでは管理側の最新版を取得できないので、契約更新時には管理側からの整合確認も必要です。
 
-APIの入口は同一配信元の`/api/`と認証トークンを前提としますが、学校資格の判定はまだ接続していません。API側でも必ず認可します。Service Workerは外枠の公開画像・JS/CSS等だけを保存し、API・PDF・認証情報を保存しません。作品の72時間保存は別工程です。
+APIの入口は同一配信元の`/api/`と認証トークンを前提としますが、学校資格はAPIのGET /api/sessionで確認し、結果の版・UID・役割をクライアントでも検証します。実クラウドとの確認は未実施です。API側でも必ず認可します。Service Workerは外枠の公開画像・JS/CSS等だけを保存し、API・PDF・認証情報を保存しません。作品の72時間保存は別工程です。
 
 環境変数は[.env.example](.env.example)を参照してください。Viteに渡す値は公開されます。秘密鍵、学生一覧、本番PDF、管理仕様を追加しません。画像の出典は[docs/assets.md](docs/assets.md)、現在地は[docs/progress.md](docs/progress.md)。本リポジトリの公開とリリースはまだ実施していません。
+
+## Googleログインの接続（T05）
+
+`.env.example`のFirebase Web設定3項目を`.env.local`へ指定します。Workerと同じFirebase projectを使用します。設定が揃うと公式SDKを遅延読込し、初期化後にGoogle専用ボタンを有効化します。学校メールの選択支援だけを認可にせず、APIでもGoogle経路・学校メール・利用資格・停止失効を確認します。
+
+Vite開発時の/apiはlocalhost:8787へ転送します。API側のOrigin設定と検証環境の資格が必要です。認証成功後は/accountで確認できます。作品の実データ画面へはまだつないでいません。403はアカウントの選び直し・資格の再確認、401はログアウトして再ログイン、障害時は再試行します。同じメールという理由で異なるFirebase UIDを結合しません。既存passwordアカウントとの連携は運営者が確認してください。
+
+Firebase SDKのブラウザ永続状態を使い、アプリ独自のトークン保存はしません。ログアウト/利用者変更時はQueryの状態と確認済み資格を破棄します。PDF・Pushの後片付けはそれぞれの機能を接続するときに追加します。共有端末では必ずログアウトします。
+
+`test:auth-config`は架空のFirebase公開設定で別の.cache/auth-buildを生成し、Chromium/WebKitでSDK初期化とボタン有効化を確認します。外部HTTPSを遮断し、実Googleログインは行いません。実端末のpopup/キャンセル・UID保持・資格停止・再ログインは検証環境での受入に残ります。
+
+Firebase13はNode24.12以上の要件があるため、Node22に対応する12系最新版12.19.0を固定しました。互換依存の解決でNode24要件のapp/app-compatが入らないよう同梱系列を固定し、未使用FirestoreのNode依存grpc-jsは同じmajorの修正版1.14.6へoverrideしています。ブラウザへFirestoreやgRPCはimportしません。SDK更新時はNode要件、overrideの除去可否、audit、ブラウザ動作を再確認してください。

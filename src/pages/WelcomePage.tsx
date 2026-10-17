@@ -11,7 +11,9 @@ import {
 import { CategoryArt } from '../components/CategoryArt';
 import { PREVIEW_ENABLED } from '../lib/environment';
 import styles from './WelcomePage.module.css';
+import { useAuth } from '../features/auth/context';
 export default function WelcomePage() {
+  const { ready, configured, busy, error, session, signedIn, login, logout, retry } = useAuth();
   return (
     <div className="page-container">
       <section className={styles.hero}>
@@ -30,15 +32,51 @@ export default function WelcomePage() {
             積み重ねてきた探究を、次の好奇心につなぐ場所。
           </p>
           <div className={styles.login}>
-            <button className="button primary" disabled>
+            <button
+              className="button primary"
+              disabled={!configured || !ready || busy || !!session}
+              onClick={login}
+            >
               <img src="/images/google-logo.svg" alt="" width="18" height="18" />
               学校のGoogleアカウントでログイン
             </button>
             <p>
-              Googleログインは準備中です。
+              {!configured
+                ? 'Googleログインは準備中です。'
+                : busy
+                  ? '利用資格を確認しています…'
+                  : session
+                    ? 'ログイン済みです。'
+                    : '学校のGoogleアカウントでログインできます。'}
               <br />
               <span>@kenryo.ed.jp のアカウントと利用資格が必要です。</span>
             </p>
+            {error && <p role="alert">{error}</p>}
+            {session && (
+              <Link className="button secondary" to="/account">
+                アカウントを確認
+              </Link>
+            )}
+            {signedIn && !session && !busy && (
+              <button
+                className="button secondary"
+                onClick={() => {
+                  void retry();
+                }}
+              >
+                利用資格を再確認
+              </button>
+            )}
+            {signedIn && (
+              <button
+                className="button quiet"
+                onClick={() => {
+                  void logout();
+                }}
+              >
+                ログアウトして選び直す
+              </button>
+            )}
             {PREVIEW_ENABLED && (
               <Link className="text-link" to="/preview/explore">
                 サンプル作品で画面を試す
