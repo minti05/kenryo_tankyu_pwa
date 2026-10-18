@@ -6,10 +6,10 @@
     "lib": ["ES2022", "WebWorker"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "types": [],
+    "types": ["vite/client"],
     "noEmit": true,
     "strict": true,
     "skipLibCheck": true
   },
-  "include": ["src/sw"]
+  "include": ["src/sw", "src/lib/firebase-config.ts"]
 }

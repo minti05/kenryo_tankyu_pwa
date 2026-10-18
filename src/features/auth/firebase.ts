@@ -1,9 +1,5 @@
-const config = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-};
-export const authConfigured = Object.values(config).every(
+import { firebaseConfig as config } from '../../lib/firebase-config';
+export const authConfigured = [config.apiKey, config.authDomain, config.projectId].every(
   (value) => typeof value === 'string' && value.trim().length > 0,
 );
 let pending: ReturnType<typeof createRuntime> | undefined;

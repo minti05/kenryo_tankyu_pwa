@@ -32,7 +32,7 @@ export function offlineApi() {
         const cookie = /offline-test=([^;]+)/.exec(req.headers.cookie ?? '')?.[1] ?? 'none';
         let state = states.get(cookie);
         if (!state) {
-          state = { status: 200, rev: 'a'.repeat(64), calls: [] };
+          state = { status: 200, rev: 'a'.repeat(64), calls: [], push: null, noticeRead: false };
           states.set(cookie, state);
         }
         function json(body, status = 200) {
@@ -77,6 +77,34 @@ export function offlineApi() {
           return state.deletion
             ? json({ version: '1', id: state.deletion, status: 'pending' })
             : json({ error: { code: 'not_found' } }, 404);
+        }
+        if (path === '/api/push-subscriptions') {
+          if (req.method === 'PUT') {
+            let text = '';
+            for await (const c of req) text += c;
+            state.push = JSON.parse(text);
+          }
+          if (req.method === 'DELETE') state.push = null;
+          return json(
+            req.method === 'GET'
+              ? { version: '1', enabled: true, registered: !!state.push }
+              : { version: '1', ok: true },
+          );
+        }
+        const notice = {
+          id: '11111111-1111-4111-8111-111111111111',
+          title: '架空のお知らせ',
+          body: 'これは通知の試験です。',
+          createdAt: '2026-10-18T00:00:00Z',
+          read: state.noticeRead,
+          workId: null,
+        };
+        if (path === '/api/notifications')
+          return json({ version: '1', items: [notice], nextCursor: null });
+        if (path === '/api/notifications/' + notice.id) return json(notice);
+        if (path === '/api/notification-reads/' + notice.id) {
+          state.noticeRead = true;
+          return json({ version: '1', ok: true });
         }
         if (path === '/api/session')
           return json({ version: '1', uid: 'fixture-alice', role: 'student' });

@@ -34,6 +34,18 @@ export default defineConfig(({ command, mode }) => {
                   throw new Error('Fixture auth is restricted to .cache/offline-build');
               },
               resolveId(source: string, importer: string | undefined) {
+                if (importer?.endsWith('/features/notifications/runtime.ts')) {
+                  if (source === 'firebase/messaging')
+                    return fileURLToPath(new URL('./tests/offline-messaging.ts', import.meta.url));
+                  if (source === '../../lib/firebase-config')
+                    return fileURLToPath(
+                      new URL('./tests/offline-push-config.ts', import.meta.url),
+                    );
+                }
+                if (importer?.endsWith('/src/sw/sw.ts') && source === './notifications')
+                  return fileURLToPath(
+                    new URL('./tests/offline-notification-sw.ts', import.meta.url),
+                  );
                 if (
                   importer?.endsWith('/features/auth/AuthProvider.tsx') &&
                   source === './firebase'
@@ -79,6 +91,23 @@ export default defineConfig(({ command, mode }) => {
         registerType: 'prompt',
         injectRegister: null,
         injectManifest: {
+          buildPlugins: {
+            vite:
+              process.env.TANKYU_OFFLINE_TEST_BUILD === '1'
+                ? [
+                    {
+                      name: 'offline-push-sw-sink',
+                      enforce: 'pre',
+                      resolveId(source: string, importer: string | undefined) {
+                        if (importer?.endsWith('/src/sw/sw.ts') && source === './notifications')
+                          return fileURLToPath(
+                            new URL('./tests/offline-notification-sw.ts', import.meta.url),
+                          );
+                      },
+                    },
+                  ]
+                : [],
+          },
           globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'],
           globIgnores: ['**/pdf-runtime-*.js', '**/pdf.worker*', 'pdfjs/**'],
           maximumFileSizeToCacheInBytes: 2000000,

@@ -449,3 +449,152 @@ test('退会: 受付後の応答不明は本人の受付を照会してログア
   await expect(page).toHaveURL(/welcome/);
   expect((await f.calls()).filter((x) => x === 'GET /api/account-deletion')).toHaveLength(1);
 });
+
+async function notificationFixture(page: Page, context: BrowserContext) {
+  await context.addInitScript(() => {
+    let permission = 'default';
+    class FixtureNotification {
+      static get permission() {
+        return permission;
+      }
+      static requestPermission() {
+        permission = 'granted';
+        return Promise.resolve('granted');
+      }
+    }
+    Object.defineProperty(ServiceWorkerRegistration.prototype, 'pushManager', {
+      configurable: true,
+      get: () => ({ getSubscription: async () => null }),
+    });
+    Object.defineProperty(ServiceWorkerRegistration.prototype, 'getNotifications', {
+      configurable: true,
+      value: async () => [],
+    });
+    Object.defineProperty(window, 'Notification', {
+      value: FixtureNotification,
+      configurable: true,
+    });
+    if (!('PushManager' in window))
+      Object.defineProperty(window, 'PushManager', { value: class {} });
+  });
+  return fixture(page, context);
+}
+async function pushMessage(page: Page, type: string, data: unknown) {
+  return page.evaluate(
+    ({ type, data }) =>
+      new Promise<{ shown: { title: string; options: { body: string } }[]; opened: string[] }>(
+        (resolve) => {
+          const channel = new MessageChannel();
+          channel.port1.onmessage = (e) => resolve(e.data);
+          navigator.serviceWorker.controller!.postMessage({ type, data }, [channel.port2]);
+        },
+      ),
+    { type, data },
+  );
+}
+async function enableNotifications(page: Page) {
+  await page.goto('/notifications');
+  await page.getByRole('button', { name: '通知を受け取る', exact: true }).click();
+  await expect(page.getByText('端末登録：有効', { exact: true })).toBeVisible();
+}
+async function binding(page: Page) {
+  return page.evaluate(
+    () =>
+      new Promise<import('../src/features/offline/store').PushBinding | null>((resolve, reject) => {
+        const r = indexedDB.open('tankyu-offline-v1', 1);
+        r.onerror = () => reject(r.error);
+        r.onsuccess = () => {
+          const tx = r.result.transaction('control', 'readonly'),
+            q = tx.objectStore('control').get('owner');
+          q.onsuccess = () => resolve(q.result?.push ?? null);
+          tx.oncomplete = () => r.result.close();
+        };
+      }),
+  );
+}
+test('通知: 単一SWを指定した登録・前景案内・内容表示と既読', async ({ page, context }) => {
+  await notificationFixture(page, context);
+  await enableNotifications(page);
+  await page.waitForFunction(
+    () => !!(window as unknown as { fixtureMessagingReady: boolean }).fixtureMessagingReady,
+  );
+  const b = await binding(page);
+  await page.evaluate(
+    (data) => window.dispatchEvent(new CustomEvent('fixture-fcm-message', { detail: { data } })),
+    {
+      type: 'archive-notice',
+      noticeId: '11111111-1111-4111-8111-111111111111',
+      binding: b!.binding,
+    },
+  );
+  await expect(page.getByText('新しいお知らせがあります。', { exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'お知らせを確認', exact: true }).click();
+  await expect(page.getByLabel('お知らせの内容')).toContainText('これは通知の試験です。');
+  await expect(page.getByLabel('お知らせ一覧')).toContainText('既読');
+});
+test('通知: 背景では一般文のみ表示・タップ先は自サービスの固定URL', async ({ page, context }) => {
+  await notificationFixture(page, context);
+  await enableNotifications(page);
+  const b = await binding(page),
+    data = {
+      type: 'archive-notice',
+      noticeId: '11111111-1111-4111-8111-111111111111',
+      binding: b!.binding,
+      title: '漏れてはいけない作者名',
+      url: 'https://evil.example',
+    };
+  const result = await pushMessage(page, 'FIXTURE_PUSH', data);
+  expect(result.shown).toHaveLength(1);
+  expect(result.shown[0]!.options.body).toBe(
+    '新しいお知らせがあります。アプリで確認してください。',
+  );
+  expect(JSON.stringify(result.shown)).not.toContain('漏れてはいけない作者名');
+  const click = await pushMessage(page, 'FIXTURE_CLICK', data);
+  expect(click.opened.at(-1)).toBe(
+    'http://127.0.0.1:4178/notifications?open=11111111-1111-4111-8111-111111111111',
+  );
+});
+test('通知: 停止・再有効化・ログアウト後に古いPushを表示しない', async ({ page, context }) => {
+  const f = await notificationFixture(page, context);
+  await enableNotifications(page);
+  const b = await binding(page),
+    data = {
+      type: 'archive-notice',
+      noticeId: '11111111-1111-4111-8111-111111111111',
+      binding: b!.binding,
+    };
+  await page.getByRole('button', { name: 'この端末の通知を停止', exact: true }).click();
+  await expect(page.getByText('端末登録：なし', { exact: true })).toBeVisible();
+  expect((await pushMessage(page, 'FIXTURE_PUSH', data)).shown).toHaveLength(0);
+  await page.getByRole('button', { name: '通知を受け取る', exact: true }).click();
+  await expect(page.getByText('端末登録：有効', { exact: true })).toBeVisible();
+  expect((await binding(page))!.binding).not.toBe(b!.binding);
+  await page.goto('/account');
+  await page.getByRole('button', { name: 'ログアウト', exact: true }).click();
+  await expect(page).toHaveURL(/welcome/);
+  expect((await pushMessage(page, 'FIXTURE_PUSH', data)).shown).toHaveLength(0);
+  expect((await f.calls()).filter((x) => x === 'DELETE /api/push-subscriptions').length).toBe(2);
+});
+test('通知: 不一致binding・不正通知ID・解除後のクリックを拒否', async ({ page, context }) => {
+  await notificationFixture(page, context);
+  await enableNotifications(page);
+  await page.waitForFunction(
+    () => !!(window as unknown as { fixtureMessagingReady: boolean }).fixtureMessagingReady,
+  );
+  const b = await binding(page);
+  for (const data of [
+    { type: 'archive-notice', noticeId: '../evil', binding: b!.binding },
+    { type: 'archive-notice', noticeId: '11111111-1111-4111-8111-111111111111', binding: 'wrong' },
+  ])
+    expect((await pushMessage(page, 'FIXTURE_PUSH', data)).shown).toHaveLength(0);
+  await page.getByRole('button', { name: 'この端末の通知を停止', exact: true }).click();
+  await expect(page.getByText('端末登録：なし', { exact: true })).toBeVisible();
+  expect(
+    (
+      await pushMessage(page, 'FIXTURE_CLICK', {
+        noticeId: '11111111-1111-4111-8111-111111111111',
+        binding: b!.binding,
+      })
+    ).opened,
+  ).toHaveLength(0);
+});

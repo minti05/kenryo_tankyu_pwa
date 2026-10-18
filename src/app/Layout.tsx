@@ -1,3 +1,4 @@
+import { NotificationBridge } from '../features/notifications/NotificationBridge';
 import { useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { Compass, LibraryBig, Info, ArrowUpRight } from 'lucide-react';
@@ -48,6 +49,7 @@ export function Layout() {
                 </NavLink>
                 <NavLink to="/awards">KRGP</NavLink>
                 <NavLink to="/library">ライブラリ</NavLink>
+                <NavLink to="/notifications">お知らせ</NavLink>
                 <NavLink to="/account">アカウント</NavLink>
               </>
             )}
@@ -63,6 +65,13 @@ export function Layout() {
           </span>
         </div>
       </header>
+      {import.meta.env.VITE_NOTIFICATION_ACCEPTANCE === 'true' && (
+        <aside className="preview-banner">
+          <b>通知の接続テスト専用</b>
+          <span>対象アカウントのみ利用できます。作品・PDFの本番提供は準備中です。</span>
+          <Link to="/notifications">お知らせへ</Link>
+        </aside>
+      )}
       {preview && (
         <div className="preview-banner">
           <span>
@@ -92,6 +101,7 @@ export function Layout() {
         <small>長野県松本県ケ丘高等学校 生徒向け</small>
       </footer>
       <PwaNotice />
+      <NotificationBridge />
     </div>
   );
 }

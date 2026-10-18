@@ -1,3 +1,4 @@
+import { unsubscribeBrowserPush } from '../../lib/push-cleanup';
 import type { SearchWorkDto } from '../../contracts/discovery.generated';
 import type { Session } from '../auth/context';
 import type { PdfData } from '../works/pdf-data';
@@ -10,7 +11,14 @@ export interface CacheSession {
   epoch: string;
   fence: string;
 }
+export interface PushBinding {
+  deviceId: string;
+  binding: string;
+  active: boolean;
+  expiresAt: number;
+}
 interface Control extends CacheSession {
+  push?: PushBinding;
   streak?: { day: number; count: number };
   grant: (Session & { expiresAt: number }) | null;
   server: number;
@@ -195,11 +203,15 @@ export async function revokeCache() {
   anchor = null;
   localStorage.setItem(FENCE, crypto.randomUUID());
   emit();
-  await transaction(async (tx) => {
+  const hadPush = await transaction(async (tx) => {
+    const c = await control(tx);
     tx.objectStore('entries').clear();
     tx.objectStore('files').clear();
     tx.objectStore('control').clear();
+    return !!c?.push;
   });
+  // The local fence already blocks display; OS cleanup must not delay revocation UI.
+  if (hadPush) void unsubscribeBrowserPush().catch(() => {});
   emit();
 }
 export async function forgetOtherUser(uid: string) {
@@ -408,4 +420,20 @@ export async function visitStreak(session: CacheSession, serverTime: string): Pr
     tx.objectStore('control').put(c, 'owner');
     return c.streak?.count ?? 1;
   });
+}
+
+export async function readPushBinding(session: CacheSession): Promise<PushBinding | null> {
+  return transaction(async (tx) => {
+    const { c } = await checked(tx, session);
+    return c.push ?? null;
+  });
+}
+export async function writePushBinding(session: CacheSession, push: PushBinding | null) {
+  await transaction(async (tx) => {
+    const { c } = await checked(tx, session);
+    if (push) c.push = push;
+    else delete c.push;
+    tx.objectStore('control').put(c, 'owner');
+  });
+  emit();
 }

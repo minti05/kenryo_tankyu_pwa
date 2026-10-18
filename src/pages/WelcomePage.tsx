@@ -25,9 +25,11 @@ export default function WelcomePage() {
     next =
       requested &&
       requested.length < 2000 &&
-      /^\/(works\/\d{8}|explore|awards|saved)(\?|$)/.test(requested)
+      /^\/(works\/\d{8}|explore|awards|saved|library|notifications)(\?|$)/.test(requested)
         ? requested
-        : '/account';
+        : import.meta.env.VITE_NOTIFICATION_ACCEPTANCE === 'true'
+          ? '/notifications'
+          : '/account';
   return (
     <div className="page-container">
       <section className={styles.hero}>

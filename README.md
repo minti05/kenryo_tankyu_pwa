@@ -122,3 +122,13 @@ Firebase永続状態の同じUIDと前回の認可が期限内の場合だけオ
 `npm run test:library`と`npm run test:offline`で操作、失敗、再認証中断と受付後の応答不明を確認します。開発専用`/tests/progress-harness.html`で架空データのT11画面を操作できます。通常本番buildへこの入口は含めません。
 
 実Google・学校資格・Supabase/R2は未接続です。退会はpending受付と運営側の永続processorを分け、受付を削除完了とは表示しません。実環境の定期実行・失敗監視・T12通知トークンの削除も公開前に必要です。秘密の管理SDKをブラウザへ入れないでください。
+
+## T12：端末への通知とお知らせ
+
+`/notifications`で一覧・内容・既読と、この端末だけの通知登録/停止を扱います。`src/features/notifications`が画面と前景受信、`src/sw/notifications.ts`が既存の単一SW内で背景受信/タップを担当します。通知を押すと認証済みAPIから本文を読みます。OS通知には一般文だけを表示します。
+
+Push設定は`.env.example`のFirebase公開設定とVAPID公開鍵です。送信鍵・管理SDK JSON・Supabase秘密鍵をアプリへ入れません。iPhone/iPadは対応OSでホーム画面へ追加したアプリから利用する必要があります。通知は明示操作で許可を求め、拒否/未対応/設定準備中も一覧を使えます。
+
+`test:offline`では通知登録/前景/背景/タップ/停止/ログアウト後の表示抑止を追加しました。架空のFCM輸送・OS通知表示を隔離ビルドだけで置換し、実際の画面/保存/SWの照合処理を検証します。通常buildにはこれらのfixtureを含めません。`VITE_NOTIFICATION_ACCEPTANCE=true`は一名限定の実通知試験に使う専用ビルドだけの設定です。
+
+実Androidの受信とタップは確認済み。追加実機確認は保留中です。通常Supabase通知RPCと恒久公開先は未配置で、一時URLの試験成功を一般公開の完成とは扱いません。

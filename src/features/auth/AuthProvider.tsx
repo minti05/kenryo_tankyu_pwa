@@ -176,6 +176,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }
   async function logout() {
+    if (cacheSession && runtime.current?.auth.currentUser) {
+      const user = runtime.current.auth.currentUser;
+      const call = createApiClient(async () =>
+        runtime.current?.auth.currentUser?.uid === user.uid ? await user.getIdToken() : null,
+      );
+      await import('../notifications/runtime')
+        .then((sdk) => sdk.disablePush(cacheSession, call))
+        .catch(() => {});
+    }
+
     generation.current++;
     setSession(null);
     setCacheSession(null);

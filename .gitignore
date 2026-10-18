@@ -13,3 +13,6 @@ test-results/
 
 test-results-pdf/
 test-results-offline/
+
+# Local credentials; never commit
+/secrets/

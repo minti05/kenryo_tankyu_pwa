@@ -9,6 +9,9 @@ if (process.env.VITE_ENABLE_PREVIEW === 'true') {
       const text = await readFile(join('dist/assets', file), 'utf8');
       if (
         text.includes('fixture-token') ||
+        text.includes('FIXTURE_PUSH') ||
+        text.includes('/api/acceptance/test') ||
+        text.includes('fixture-push-token') ||
         text.includes('offline-fixture-user') ||
         text.includes('offlineFixtureStore') ||
         text.includes('discovery-harness') ||
@@ -21,6 +24,8 @@ if (process.env.VITE_ENABLE_PREVIEW === 'true') {
 }
 
 const sw = await readFile('dist/sw.js', 'utf8');
+if (/FIXTURE_PUSH|fixture-push-token/.test(sw))
+  throw new Error('Notification fixture leaked into production SW');
 if (
   [...sw.matchAll(/url:["']([^"']+)["']/g)].some((m) =>
     /pdf-runtime-|pdf\.worker|pdfjs\//.test(m[1]),
