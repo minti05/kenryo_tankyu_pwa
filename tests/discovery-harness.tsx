@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext, type AuthState } from '../src/features/auth/context';
 import { createApiClient, createApiTransport } from '../src/lib/api-client';
 import { Layout } from '../src/app/Layout';
+import LibraryPage from '../src/features/library/LibraryPage';
 import SearchPage from '../src/features/discovery/SearchPage';
 import SearchGate from '../src/features/auth/RequireSession';
 import WorkPage from '../src/features/works/WorkPage';
@@ -23,6 +24,7 @@ const auth: AuthState = {
   request: createApiClient(async () => 'fixture-token'),
   login: () => {},
   logout: async () => {},
+  deleteAccount: async () => {},
   retry: async () => {},
 };
 window.history.replaceState(null, '', entry);
@@ -32,6 +34,7 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <Routes>
           <Route element={<Layout />}>
+            <Route path="library" element={<LibraryPage />} />
             <Route
               path="explore"
               element={

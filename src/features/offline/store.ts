@@ -11,6 +11,7 @@ export interface CacheSession {
   fence: string;
 }
 interface Control extends CacheSession {
+  streak?: { day: number; count: number };
   grant: (Session & { expiresAt: number }) | null;
   server: number;
   wall: number;
@@ -391,5 +392,20 @@ export async function sweepExpired() {
     );
     if (c.blocked) c.grant = null;
     tx.objectStore('control').put(c, 'owner');
+  });
+}
+
+/** Local, owner-fenced usage streak. Legacy device-global SharedPreferences cannot be transferred. */
+export async function visitStreak(session: CacheSession, serverTime: string): Promise<number> {
+  const millis = Date.parse(serverTime);
+  if (!Number.isFinite(millis)) throw new Error('invalid_server_time');
+  return transaction(async (tx) => {
+    const { c } = await checked(tx, session);
+    const day = Math.floor((millis + 9 * 3600000) / 86400000);
+    const old = c.streak;
+    if (!old || day > old.day)
+      c.streak = { day, count: old && day === old.day + 1 ? old.count + 1 : 1 };
+    tx.objectStore('control').put(c, 'owner');
+    return c.streak?.count ?? 1;
   });
 }

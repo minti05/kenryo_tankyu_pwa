@@ -19,6 +19,8 @@ export function createApiTransport(getToken: () => Promise<string | null>) {
     if (!token) throw new ApiError(401, 'authentication_required');
     const headers = new Headers(options.headers);
     headers.set('Authorization', `Bearer ${token}`);
+    if (typeof options.body === 'string' && !headers.has('Content-Type'))
+      headers.set('Content-Type', 'application/json');
     if (!headers.has('Accept')) headers.set('Accept', 'application/json');
     const response = await fetch(path, {
       ...options,

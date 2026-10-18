@@ -15,6 +15,7 @@ export interface AuthState {
   signedIn: boolean;
   login: () => void;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   retry: () => Promise<void>;
 }
 export const AuthContext = createContext<AuthState | null>(null);

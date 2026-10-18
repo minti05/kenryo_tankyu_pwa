@@ -47,7 +47,7 @@ export function Layout() {
                   見つける
                 </NavLink>
                 <NavLink to="/awards">KRGP</NavLink>
-                <NavLink to="/saved">端末の保存</NavLink>
+                <NavLink to="/library">ライブラリ</NavLink>
                 <NavLink to="/account">アカウント</NavLink>
               </>
             )}

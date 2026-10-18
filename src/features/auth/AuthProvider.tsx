@@ -1,3 +1,5 @@
+import type { ReceiptDto } from '../../contracts/library.generated';
+import { operation } from '../library/client';
 import {
   forgetOtherUser,
   activateCache,
@@ -45,7 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [offline, setOffline] = useState(false),
     [cacheSession, setCacheSession] = useState<CacheSession | null>(null);
   const runtime = useRef<Awaited<ReturnType<typeof initializeAuth>> | null>(null),
-    generation = useRef(0);
+    generation = useRef(0),
+    deleting = useRef(false),
+    deletionIntent = useRef<ReturnType<typeof operation> | null>(null);
   const checkRef = useRef<() => Promise<void>>(async () => {});
   useEffect(() => {
     if (!authConfigured) return;
@@ -57,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         runtime.current = value;
         setReady(true);
         const check = async () => {
+          if (deleting.current) return;
           const ticket = ++generation.current;
           setSession(null);
           setCacheSession(null);
@@ -187,6 +192,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setError(message(caught));
     }
   }
+  async function deleteAccount() {
+    const value = runtime.current,
+      user = value?.auth.currentUser;
+    if (!value || !user || offline || !navigator.onLine || deleting.current)
+      throw new ApiError(0, 'offline');
+    deleting.current = true;
+    // Open directly from the user's click; no preceding network await.
+    const popup = value.sdk.reauthenticateWithPopup(user, value.provider);
+    try {
+      const result = await popup;
+      if (result.user.uid !== user.uid || value.auth.currentUser?.uid !== user.uid)
+        throw new ApiError(401, 'session_changed');
+      const token = await user.getIdToken(true);
+      const call = createApiClient(async () =>
+        value.auth.currentUser?.uid === user.uid ? token : null,
+      );
+      deletionIntent.current ??= operation();
+      let receipt: ReceiptDto;
+      try {
+        receipt = await call<ReceiptDto>('/api/account-deletion', {
+          method: 'POST',
+          body: JSON.stringify(deletionIntent.current),
+        });
+      } catch (original) {
+        try {
+          receipt = await call<ReceiptDto>('/api/account-deletion');
+        } catch {
+          throw original;
+        }
+      }
+      if (
+        receipt.version !== '1' ||
+        receipt.status !== 'pending' ||
+        !/^[a-f0-9-]{36}$/i.test(receipt.id)
+      )
+        throw new ApiError(503, 'invalid_response');
+      try {
+        sessionStorage.setItem('account-deletion-receipt', receipt.id);
+      } catch {
+        /* Receipt display is optional; deletion remains durable. */
+      }
+      await logout();
+    } finally {
+      deleting.current = false;
+      if (value.auth.currentUser?.uid !== user.uid) void checkRef.current();
+    }
+  }
   async function requestResponse(path: string, options: RequestInit = {}): Promise<Response> {
     if (offline || !navigator.onLine) throw new ApiError(0, 'offline');
     const uid = session?.uid;
@@ -277,6 +329,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signedIn,
         login,
         logout,
+        deleteAccount,
         retry: () => checkRef.current(),
       }}
     >

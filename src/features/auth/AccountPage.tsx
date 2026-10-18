@@ -1,7 +1,12 @@
+import { useState } from 'react';
+import { libraryMessage } from '../library/client';
 import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from './context';
 export default function AccountPage() {
-  const { session, busy, logout, error, offline } = useAuth();
+  const [confirmDelete, setConfirmDelete] = useState(false),
+    [deleting, setDeleting] = useState(false),
+    [deleteError, setDeleteError] = useState('');
+  const { session, busy, logout, deleteAccount, error, offline } = useAuth();
   if (busy)
     return (
       <div className="loading-state" role="status">
@@ -25,6 +30,38 @@ export default function AccountPage() {
       <Link className="button secondary" to="/saved">
         端末の保存を開く
       </Link>
+      <Link className="button secondary" to="/library">
+        ライブラリを開く
+      </Link>
+      <details>
+        <summary>アカウントを削除する</summary>
+        <p>
+          閲覧・検索履歴、お気に入り、報告、学校アカウントのアプリ利用登録を削除します。学校のGoogleアカウントや作品そのものは削除しません。端末内の保存も利用できなくなります。
+        </p>
+        <p>Googleで本人確認した後に受付します。削除完了まで時間がかかる場合があります。</p>
+        <label>
+          <input
+            type="checkbox"
+            checked={confirmDelete}
+            onChange={(e) => setConfirmDelete(e.target.checked)}
+          />{' '}
+          削除内容を確認しました
+        </label>
+        <button
+          className="button secondary"
+          disabled={!confirmDelete || deleting || offline}
+          onClick={() => {
+            setDeleting(true);
+            setDeleteError('');
+            void deleteAccount()
+              .catch((e) => setDeleteError(libraryMessage(e)))
+              .finally(() => setDeleting(false));
+          }}
+        >
+          Googleで本人確認して退会する
+        </button>
+        {deleteError && <p role="alert">{deleteError}</p>}
+      </details>
       {error && <p role="alert">{error}</p>}
       <button
         className="button secondary"

@@ -112,3 +112,13 @@ Firebase永続状態の同じUIDと前回の認可が期限内の場合だけオ
 `npm run test:offline`は`.cache/offline-build`へ隔離した試験ビルドです。実AuthProvider/IndexedDB/SW/PDF.jsを使い、Firebaseの状態とHTTP応答だけを架空のfixtureに置換します。`TANKYU_OFFLINE_TEST_BUILD=1`はこの出力先以外では拒否します。通常buildは本来のFirebase SDKのまま、fixtureの漏れを検査します。試験ビルドを公開しないでください。
 
 学校の実端末・実Firebase/R2・HTTPSでの保存/再起動・低容量・長時間休止・SW更新の受入は別途必要です。実サービスの一般公開はまだ行っていません。通知と本人のクラウド閲覧状態は後続です。
+
+## T11：本人ライブラリ・報告・退会
+
+`/library`は本人のクラウド閲覧履歴・お気に入りと統計を表示します。`/saved`はこの端末の72時間PDF保存です。作品画面にお気に入りと4種類の報告、アカウント画面にGoogle再認証による退会を追加しました。履歴はPDFの初ページ表示後に記録します。
+
+`src/features/library`が一覧・操作・再試行、`AuthProvider`が再認証と退会受付後の端末保存破棄を担当します。履歴の個別削除はお気に入りも外し、全件・期間削除ではお気に入りを残します。統計は日本時間の最新閲覧日時による作品数です。旧Firestoreのいいね数とSupabaseのお気に入り人数は区別します。
+
+`npm run test:library`と`npm run test:offline`で操作、失敗、再認証中断と受付後の応答不明を確認します。開発専用`/tests/progress-harness.html`で架空データのT11画面を操作できます。通常本番buildへこの入口は含めません。
+
+実Google・学校資格・Supabase/R2は未接続です。退会はpending受付と運営側の永続processorを分け、受付を削除完了とは表示しません。実環境の定期実行・失敗監視・T12通知トークンの削除も公開前に必要です。秘密の管理SDKをブラウザへ入れないでください。

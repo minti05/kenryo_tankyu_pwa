@@ -22,7 +22,8 @@
     "test:discovery": "playwright test --config playwright.discovery.config.ts",
     "test:pdf": "playwright test --config playwright.pdf.config.ts",
     "test:offline": "playwright test --config playwright.offline.config.ts",
-    "test:offline:serve": "node scripts/offline-test-server.mjs"
+    "test:offline:serve": "node scripts/offline-test-server.mjs",
+    "test:library": "playwright test --config playwright.library.config.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "5.104.3",

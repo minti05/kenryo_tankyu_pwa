@@ -34,6 +34,11 @@ export async function initializeAuth() {
         auth.currentUser = null;
         window.dispatchEvent(new Event('offline-fixture-user'));
       },
+      reauthenticateWithPopup: async () => {
+        if (localStorage.getItem('fixture-reauth-fail')) throw new Error('cancelled');
+        window.dispatchEvent(new Event('offline-fixture-user'));
+        return { user: auth.currentUser };
+      },
       signInWithPopup: async () => {},
     },
   };

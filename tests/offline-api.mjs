@@ -47,6 +47,7 @@ export function offlineApi() {
             for await (const chunk of req) text += chunk;
             const value = JSON.parse(text);
             if (value.status) state.status = value.status;
+            if (value.deleteResponseFail) state.deleteResponseFail = true;
             if (value.rev) state.rev = value.rev;
           }
           return json(state);
@@ -63,6 +64,20 @@ export function offlineApi() {
             },
             state.status,
           );
+        if (path === '/api/account-deletion') {
+          if (req.method === 'POST') {
+            let text = '';
+            for await (const chunk of req) text += chunk;
+            state.deletion = JSON.parse(text).operationId;
+            if (state.deleteResponseFail) {
+              state.deleteResponseFail = false;
+              return json({ error: { code: 'upstream_unavailable' } }, 503);
+            }
+          }
+          return state.deletion
+            ? json({ version: '1', id: state.deletion, status: 'pending' })
+            : json({ error: { code: 'not_found' } }, 404);
+        }
         if (path === '/api/session')
           return json({ version: '1', uid: 'fixture-alice', role: 'student' });
         if (path === '/api/works/24000010')

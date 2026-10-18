@@ -411,3 +411,41 @@ test('ブラウザを終了し同じプロファイルでオフライン再起�
     await rm(profile, { recursive: true, force: true });
   }
 });
+
+test('退会: Google再認証後に受付し、保存とログイン状態を破棄', async ({ page, context }) => {
+  const f = await fixture(page, context);
+  await save(page);
+  await page.goto('/account');
+  await page.getByText('アカウントを削除する', { exact: true }).click();
+  await page.getByLabel('削除内容を確認しました').check();
+  await page.getByRole('button', { name: 'Googleで本人確認して退会する' }).click();
+  await expect(page).toHaveURL(/welcome/);
+  await expect(
+    page.getByRole('status').filter({ hasText: '退会手続きを受け付けました' }),
+  ).toBeVisible();
+  expect(await rows(page)).toHaveLength(0);
+  expect(await page.evaluate(() => localStorage.getItem('offline-fixture-user'))).toBeNull();
+  expect((await f.calls()).filter((x) => x === 'POST /api/account-deletion')).toHaveLength(1);
+});
+test('退会: 再認証中断では送信も保存削除もしない', async ({ page, context }) => {
+  const f = await fixture(page, context);
+  await save(page);
+  await page.evaluate(() => localStorage.setItem('fixture-reauth-fail', '1'));
+  await page.goto('/account');
+  await page.getByText('アカウントを削除する', { exact: true }).click();
+  await page.getByLabel('削除内容を確認しました').check();
+  await page.getByRole('button', { name: 'Googleで本人確認して退会する' }).click();
+  await expect(page.getByRole('alert')).toBeVisible();
+  expect((await f.calls()).filter((x) => x === 'POST /api/account-deletion')).toHaveLength(0);
+  expect(await rows(page)).toHaveLength(1);
+});
+test('退会: 受付後の応答不明は本人の受付を照会してログアウト', async ({ page, context }) => {
+  const f = await fixture(page, context);
+  await f.state({ deleteResponseFail: true });
+  await page.goto('/account');
+  await page.getByText('アカウントを削除する', { exact: true }).click();
+  await page.getByLabel('削除内容を確認しました').check();
+  await page.getByRole('button', { name: 'Googleで本人確認して退会する' }).click();
+  await expect(page).toHaveURL(/welcome/);
+  expect((await f.calls()).filter((x) => x === 'GET /api/account-deletion')).toHaveLength(1);
+});

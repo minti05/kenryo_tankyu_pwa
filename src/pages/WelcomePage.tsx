@@ -13,6 +13,12 @@ import { PREVIEW_ENABLED } from '../lib/environment';
 import styles from './WelcomePage.module.css';
 import { useAuth } from '../features/auth/context';
 export default function WelcomePage() {
+  let deletionReceipt: string | null = null;
+  try {
+    deletionReceipt = sessionStorage.getItem('account-deletion-receipt');
+  } catch {
+    /* Some browsers disable session storage. */
+  }
   const { ready, configured, busy, error, session, signedIn, login, logout, retry } = useAuth();
   const [params] = useSearchParams(),
     requested = params.get('next'),
@@ -28,6 +34,11 @@ export default function WelcomePage() {
         <div className={styles.copy}>
           <span className="eyebrow">MATSUMOTO KENRYO HIGH SCHOOL</span>
           <p className={styles.school}>松本県ケ丘高校生徒のための探究アーカイブ</p>
+          {deletionReceipt && (
+            <p role="status">
+              退会手続きを受け付けました。運営側で削除処理を完了します。受付番号：{deletionReceipt}
+            </p>
+          )}
           <h1>
             先輩の問いから、
             <br />

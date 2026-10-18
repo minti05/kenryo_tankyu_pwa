@@ -1,3 +1,5 @@
+import { WorkActions } from '../library/WorkActions';
+import { operation } from '../library/client';
 import OfflineWorkPage from '../offline/OfflineWorkPage';
 import { deleteSaved, listSaved, readSaved, saveViewed, type CacheSession } from '../offline/store';
 import { preparePdfAssets } from '../offline/assets';
@@ -89,7 +91,7 @@ function OnlineWorkPage() {
     refetchOnWindowFocus: true,
   });
   const from = params.get('from'),
-    back = from && /^\/(explore|awards)(\?|$)/.test(from) ? from : '/explore';
+    back = from && /^\/(explore|awards|library)(\?|$)/.test(from) ? from : '/explore';
   if (!/^\d{8}$/.test(id))
     return (
       <div className="page-container empty-state">
@@ -174,6 +176,7 @@ function OnlineWorkPage() {
           <p>{work.summary}</p>
         </section>
       )}
+      <WorkActions key={work.documentID} work={work} />
       <section aria-label="資料">
         <div className={styles.tabs} role="group" aria-label="資料の種類">
           {documents.map((d) => (
@@ -219,9 +222,12 @@ function DocumentPane({
   document: WorkDocumentDto;
   onRefresh: () => void;
 }) {
-  const { requestResponse, cacheSession, session } = useAuth(),
+  const { requestResponse, request: jsonRequest, cacheSession, session } = useAuth(),
     [savedMessage, setSavedMessage] = useState(''),
     saved = useRef(false),
+    historyIntent = useRef(operation()),
+    historyStatus = useRef<'idle' | 'pending' | 'done'>('idle'),
+    [historyError, setHistoryError] = useState(false),
     owner = useRef<{ cache: CacheSession; session: NonNullable<typeof session> } | null>(null),
     request = useRef(requestResponse),
     [data, setData] = useState<(PdfData & { url: string }) | null>(null),
@@ -306,8 +312,24 @@ function DocumentPane({
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [doc.bytes, doc.revision, doc.state, doc.kind, id, path, retry]);
+  async function recordView() {
+    if (historyStatus.current !== 'idle') return;
+    historyStatus.current = 'pending';
+    try {
+      await jsonRequest('/api/history', {
+        method: 'POST',
+        body: JSON.stringify({ documentID: id, ...historyIntent.current }),
+      });
+      historyStatus.current = 'done';
+      if (alive.current) setHistoryError(false);
+    } catch {
+      historyStatus.current = 'idle';
+      if (alive.current) setHistoryError(true);
+    }
+  }
   async function onViewed() {
     setViewed(true);
+    void recordView();
     if (saved.current || !data || !owner.current) return;
     saved.current = true;
     const identity = owner.current;
@@ -410,6 +432,14 @@ function DocumentPane({
         <p>
           アプリ内の保存は、オンラインで閲覧した時点から3日間です。オフラインで開いても期限は延びません。
         </p>
+        {historyError && (
+          <p role="status">
+            閲覧履歴を記録できませんでした。
+            <button className="button secondary" onClick={() => void recordView()}>
+              履歴の記録を再試行
+            </button>
+          </p>
+        )}
         {savedMessage && <p role="status">{savedMessage}</p>}
         <button
           className="button primary"
