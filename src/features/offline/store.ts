@@ -228,7 +228,12 @@ export async function resumeCache(uid: string) {
     const result = await checked(tx, c);
     if (!result.c.grant || result.c.blocked || result.c.grant.expiresAt <= result.now) return null;
     return {
-      session: { version: '1' as const, uid, role: result.c.grant.role },
+      session: {
+        version: '1' as const,
+        uid,
+        role: result.c.grant.role,
+        ...(result.c.grant.enterYear === undefined ? {} : { enterYear: result.c.grant.enterYear }),
+      },
       cacheSession: { uid, epoch: c.epoch, fence: c.fence },
     };
   });

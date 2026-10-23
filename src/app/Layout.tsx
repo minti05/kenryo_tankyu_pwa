@@ -1,3 +1,4 @@
+import { DisplayPreviewBanner } from '../features/auth/DisplaySettings';
 import { NotificationBridge } from '../features/notifications/NotificationBridge';
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
@@ -135,6 +136,7 @@ export function Layout() {
           オフラインで利用中 · <Link to="/saved">端末の保存を開く</Link>
         </aside>
       )}
+      <DisplayPreviewBanner />
       <main id="main" tabIndex={-1} ref={main}>
         <WorkHeaderTarget.Provider value={headerTarget}>
           <Outlet />

@@ -1,3 +1,4 @@
+import { DisplayProvider } from '../src/features/auth/DisplayProvider';
 import { StrictMode, Fragment } from 'react';
 // Test-only entry; never imported by src or included in normal build.
 import { createRoot } from 'react-dom/client';
@@ -21,6 +22,7 @@ import WorkPage from '../src/features/works/WorkPage';
 import '../src/styles/global.css';
 const entry = new URL(location.href).searchParams.get('entry') ?? '/explore';
 const TestMode = new URL(location.href).searchParams.get('strict') === '1' ? StrictMode : Fragment;
+const adminFixture = new URL(location.href).searchParams.get('role') === 'admin';
 const auth: AuthState = {
   profile: {
     displayName: '架空の利用者',
@@ -33,7 +35,7 @@ const auth: AuthState = {
   busy: false,
   error: '',
   signedIn: true,
-  session: { version: '1', uid: 'fixture-alice', role: 'student' },
+  session: { version: '1', uid: 'fixture-alice', role: adminFixture ? 'admin' : 'student' },
   requestResponse: createApiTransport(async () => 'fixture-token'),
   request: createApiClient(async () => 'fixture-token'),
   login: () => {},
@@ -48,75 +50,77 @@ createRoot(document.getElementById('root')!).render(
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
     >
       <AuthContext.Provider value={auth}>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route
-                path="test-update"
-                element={
-                  <UpdateDialog
-                    onUpdate={async () => {
-                      document.body.dataset.updateRequested = 'true';
-                    }}
-                  />
-                }
-              />
-              <Route
-                path="home"
-                element={
-                  <SearchGate>
-                    <HomePage />
-                  </SearchGate>
-                }
-              />
-              <Route path="notifications" element={<NotificationsPage />} />
-              <Route path="saved" element={<SavedPage />} />
-              <Route path="welcome" element={<WelcomePage />} />
-              <Route
-                path="search"
-                element={
-                  <SearchGate>
-                    <SearchPage />
-                  </SearchGate>
-                }
-              />
-              <Route
-                path="results"
-                element={
-                  <SearchGate>
-                    <ResultsPage />
-                  </SearchGate>
-                }
-              />
-              <Route path="account" element={<AccountPage />} />
-              <Route path="library" element={<LibraryPage />} />
-              <Route
-                path="explore/:categoryId?"
-                element={
-                  <SearchGate>
-                    <ExplorePage />
-                  </SearchGate>
-                }
-              />
-              <Route
-                path="awards"
-                element={
-                  <SearchGate>
-                    <ResultsPage awards />
-                  </SearchGate>
-                }
-              />
-              <Route
-                path="works/:id"
-                element={
-                  <SearchGate>
-                    <WorkPage />
-                  </SearchGate>
-                }
-              />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+        <DisplayProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route
+                  path="test-update"
+                  element={
+                    <UpdateDialog
+                      onUpdate={async () => {
+                        document.body.dataset.updateRequested = 'true';
+                      }}
+                    />
+                  }
+                />
+                <Route
+                  path="home"
+                  element={
+                    <SearchGate>
+                      <HomePage />
+                    </SearchGate>
+                  }
+                />
+                <Route path="notifications" element={<NotificationsPage />} />
+                <Route path="saved" element={<SavedPage />} />
+                <Route path="welcome" element={<WelcomePage />} />
+                <Route
+                  path="search"
+                  element={
+                    <SearchGate>
+                      <SearchPage />
+                    </SearchGate>
+                  }
+                />
+                <Route
+                  path="results"
+                  element={
+                    <SearchGate>
+                      <ResultsPage />
+                    </SearchGate>
+                  }
+                />
+                <Route path="account" element={<AccountPage />} />
+                <Route path="library" element={<LibraryPage />} />
+                <Route
+                  path="explore/:categoryId?"
+                  element={
+                    <SearchGate>
+                      <ExplorePage />
+                    </SearchGate>
+                  }
+                />
+                <Route
+                  path="awards"
+                  element={
+                    <SearchGate>
+                      <ResultsPage awards />
+                    </SearchGate>
+                  }
+                />
+                <Route
+                  path="works/:id"
+                  element={
+                    <SearchGate>
+                      <WorkPage />
+                    </SearchGate>
+                  }
+                />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </DisplayProvider>
       </AuthContext.Provider>
     </QueryClientProvider>
   </TestMode>,

@@ -1,3 +1,6 @@
+import { DisplaySettings } from './DisplaySettings';
+import { useDisplayIdentity } from './display-context';
+import { schoolGrade } from '../../contracts/access.generated';
 import { Moon, LogOut, HardDrive, ChevronRight } from 'lucide-react';
 import { PushSettings } from '../notifications/PushSettings';
 import { useTheme } from '../../lib/theme';
@@ -9,6 +12,8 @@ import { PolicyLinks } from '../../components/PolicyLinks';
 import { AccountAvatar } from './AccountAvatar';
 import { useAuth } from './context';
 export default function AccountPage() {
+  const { identity } = useDisplayIdentity();
+  const grade = identity.enterYear ? schoolGrade(identity.enterYear) : null;
   const { theme, setTheme } = useTheme();
   const [confirmDelete, setConfirmDelete] = useState(false),
     [deleting, setDeleting] = useState(false),
@@ -28,9 +33,17 @@ export default function AccountPage() {
         <AccountAvatar />
         <div>
           {profile?.displayName || '学校のGoogleアカウント'}
+          <small>
+            {identity.role === 'admin'
+              ? '管理者'
+              : identity.role === 'teacher'
+                ? '教員'
+                : `生徒${identity.enterYear ? ` · ${identity.enterYear}年度入学${grade ? `（${grade}年）` : ''}` : ' · 入学年度未登録'}`}
+          </small>
           {offline && <small>オフラインで利用中</small>}
         </div>
       </div>
+      <DisplaySettings />
       <section className="settings-group" aria-label="表示と通知">
         <div className="setting-row">
           <Moon size={21} />

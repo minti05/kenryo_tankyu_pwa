@@ -1,3 +1,5 @@
+import { validEnterYear } from '../../contracts/access.generated';
+import { DisplayProvider } from './DisplayProvider';
 import type { ReceiptDto } from '../../contracts/library.generated';
 import { operation } from '../library/client';
 import {
@@ -111,7 +113,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               !('uid' in data) ||
               data.uid !== user.uid ||
               !('role' in data) ||
-              !['student', 'admin'].includes(String(data.role))
+              !['student', 'teacher', 'admin'].includes(String(data.role)) ||
+              ('enterYear' in data && (data.role !== 'student' || !validEnterYear(data.enterYear)))
             )
               throw new Error('invalid_session');
             if (
@@ -352,7 +355,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         retry: () => checkRef.current(),
       }}
     >
-      {children}
+      <DisplayProvider key={`${session?.uid ?? 'signed-out'}:${session?.role ?? 'none'}`}>
+        {children}
+      </DisplayProvider>
     </AuthContext.Provider>
   );
 }

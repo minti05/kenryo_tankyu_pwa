@@ -650,3 +650,27 @@ for (const [device, width, height, entry] of [
     expect(params.get('q')).toBe('プラスチック');
     await expect(page.getByRole('combobox', { name: '並び順' })).toHaveValue('likes');
   });
+
+test('管理者は年度別の表示を確認して通常表示へ戻れる', async ({ page }) => {
+  await fixture(page);
+  await page.goto('/tests/discovery-harness.html?role=admin&entry=/account');
+  await page.getByLabel('表示する権限', { exact: true }).selectOption('student');
+  await page.getByLabel('表示する入学年度', { exact: true }).selectOption('2025');
+  await expect(
+    page.getByRole('status').filter({ hasText: '生徒 · 2025年度入学として表示を確認中' }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'ホーム', exact: true }).click();
+  await expect(page.getByText('生徒 · 2025年度入学として表示を確認中')).toBeVisible();
+  await page.getByRole('button', { name: '確認を終了' }).click();
+  await expect(page.getByText('として表示を確認中')).toHaveCount(0);
+  await page.goto('/tests/discovery-harness.html?role=admin&entry=/account');
+  await page.getByLabel('表示する権限', { exact: true }).selectOption('teacher');
+  await expect(page.getByText('教員として表示を確認中')).toBeVisible();
+  await expect(page.getByLabel('表示する入学年度', { exact: true })).toHaveCount(0);
+});
+test('生徒の設定には管理者の表示切替を出さない', async ({ page }) => {
+  await fixture(page);
+  await page.goto('/tests/discovery-harness.html?entry=/account');
+  await expect(page.getByText('生徒 · 入学年度未登録')).toBeVisible();
+  await expect(page.getByLabel('表示する権限', { exact: true })).toHaveCount(0);
+});

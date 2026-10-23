@@ -2,5 +2,6 @@
 export interface SessionDto {
   version: "1";
   uid: string;
-  role: "student" | "admin";
+  role: "student" | "teacher" | "admin";
+  enterYear?: number;
 }
