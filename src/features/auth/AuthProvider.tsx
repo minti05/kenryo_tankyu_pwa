@@ -32,6 +32,10 @@ function message(error: unknown): string {
     school_account_required: '確認済みの学校のGoogleアカウントを選んでください。',
     membership_required:
       'このアカウントの利用資格を確認できません。登録状況を運営者へ確認してください。',
+    app_suspended:
+      'このアカウントは探究アーカイブの利用が停止されています。運営者に確認してください。',
+    registration_unavailable: '利用登録を確認できませんでした。少し待ってから再試行してください。',
+    claims_refresh_required: '権限情報が更新されました。もう一度ログイン状態を確認してください。',
     session_expired: 'ログインの有効期限が切れました。もう一度ログインしてください。',
     configuration_required: '接続設定を準備中です。時間をおいてお試しください。',
   };
@@ -104,7 +108,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               const token = await user.getIdToken();
               return value.auth.currentUser?.uid === user.uid ? token : null;
             });
-            const data = await request<unknown>('/api/session');
+            let data: unknown;
+            try {
+              data = await request<unknown>('/api/session');
+            } catch (e) {
+              if (!(e instanceof ApiError) || e.code !== 'claims_refresh_required') throw e;
+              await user.getIdToken(true);
+              data = await request<unknown>('/api/session');
+            }
             if (
               !data ||
               typeof data !== 'object' ||
@@ -113,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               !('uid' in data) ||
               data.uid !== user.uid ||
               !('role' in data) ||
-              !['student', 'teacher', 'admin'].includes(String(data.role)) ||
+              !['student', 'teacher', 'admin', 'unassigned'].includes(String(data.role)) ||
               ('enterYear' in data && (data.role !== 'student' || !validEnterYear(data.enterYear)))
             )
               throw new Error('invalid_session');
@@ -122,7 +133,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               generation.current === ticket &&
               value.auth.currentUser?.uid === user.uid
             ) {
-              const cache = await activateCache(user.uid).catch(() => null);
+              const waiting = (data as Session).role === 'unassigned';
+              if (waiting) await revokeCache().catch(() => {});
+              const cache = waiting ? null : await activateCache(user.uid).catch(() => null);
               if (
                 !disposed &&
                 generation.current === ticket &&
@@ -352,7 +365,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         deleteAccount,
-        retry: () => checkRef.current(),
+        retry: async () => {
+          await runtime.current?.auth.currentUser?.getIdToken(true);
+          await checkRef.current();
+        },
       }}
     >
       <DisplayProvider key={`${session?.uid ?? 'signed-out'}:${session?.role ?? 'none'}`}>

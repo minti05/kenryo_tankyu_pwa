@@ -21,3 +21,4 @@ test-results-offline/
 
 test-results-library/
 test-results-discovery/
+*.tsbuildinfo

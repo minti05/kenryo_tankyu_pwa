@@ -1,5 +1,5 @@
 // Generated public contract. Update through its owner; do not edit by hand.
-export type AppRole = 'admin' | 'teacher' | 'student';
+export type AppRole = 'admin' | 'teacher' | 'student' | 'unassigned';
 export interface AccessIdentity {
   role: AppRole;
   enterYear?: number;
@@ -12,6 +12,7 @@ export function canAccessAudience(
   identity: AccessIdentity,
   audience: { roles?: readonly AppRole[]; enterYears?: readonly number[] },
 ): boolean {
+  if (identity.role === 'unassigned') return false;
   if (identity.role === 'admin') return true;
   if (audience.roles && !audience.roles.includes(identity.role)) return false;
   if (audience.enterYears)
