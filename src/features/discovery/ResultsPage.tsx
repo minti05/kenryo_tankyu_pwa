@@ -85,7 +85,7 @@ function OnlineResults({ awards }: { awards: boolean }) {
             <span className="sr-only">並び順</span>
             <select
               aria-label="並び順"
-              value={params.get('sort') ?? (q ? 'relevance' : 'newest')}
+              value={params.get('sort') ?? 'likes'}
               onChange={(e) => {
                 const next = new URLSearchParams(params);
                 next.set('sort', e.target.value);

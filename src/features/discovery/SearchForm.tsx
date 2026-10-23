@@ -11,6 +11,7 @@ export function SearchForm({
   label = '作品をキーワードで検索',
   preventScrollOnFocus = false,
   onActivate,
+  onQueryChange,
   onSubmitted,
   expanded,
   controls,
@@ -21,6 +22,7 @@ export function SearchForm({
   label?: string;
   preventScrollOnFocus?: boolean;
   onActivate?: () => void;
+  onQueryChange?: (text: string) => void;
   onSubmitted?: () => void;
   expanded?: boolean;
   controls?: string;
@@ -89,8 +91,14 @@ export function SearchForm({
               }
             : undefined
         }
-        onFocus={onActivate}
-        onChange={onActivate}
+        onFocus={(event) => {
+          onQueryChange?.(event.target.value);
+          onActivate?.();
+        }}
+        onChange={(event) => {
+          onActivate?.();
+          onQueryChange?.(event.target.value);
+        }}
         aria-expanded={expanded}
         aria-controls={controls}
       />

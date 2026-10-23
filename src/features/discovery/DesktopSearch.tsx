@@ -1,3 +1,5 @@
+import { ConditionSuggestions } from './ConditionSuggestions';
+import { useLocation } from 'react-router-dom';
 import { useEffect, useId, useRef, useState } from 'react';
 import { SearchForm } from './SearchForm';
 import { SearchHistory } from './SearchHistory';
@@ -12,6 +14,13 @@ export function DesktopSearch({
   onSubmitted?: () => void;
   source?: string | undefined;
 }) {
+  const location = useLocation();
+  const [text, setText] = useState(
+    () =>
+      new URLSearchParams(
+        source ? new URL(source, window.location.origin).search : location.search,
+      ).get('q') ?? '',
+  );
   const [open, setOpen] = useState(false),
     root = useRef<HTMLDivElement>(null),
     id = useId();
@@ -44,6 +53,7 @@ export function DesktopSearch({
         autoFocus={autoFocus}
         preventScrollOnFocus
         onActivate={() => setOpen(true)}
+        onQueryChange={setText}
         onSubmitted={() => {
           setOpen(false);
           onSubmitted?.();
@@ -53,6 +63,7 @@ export function DesktopSearch({
       />
       {open && (
         <div className="search-dropdown" id={id}>
+          <ConditionSuggestions text={text} source={source} onNavigate={() => setOpen(false)} />
           <SearchHistory compact onNavigate={() => setOpen(false)} />
         </div>
       )}

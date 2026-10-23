@@ -43,11 +43,7 @@ export function filterWorks(works: WorkDto[], params: URLSearchParams) {
       (!category || w.category1 === category) &&
       (!year || String(w.enterYear) === year) &&
       (!kind || documentTypes(w).includes(kind as DocumentType)) &&
-      words.every((word) =>
-        normalized(
-          [w.title, w.summary ?? '', categoryLabel(w.category1), w.author].join(' '),
-        ).includes(word),
-      ),
+      words.every((word) => normalized(w.title).includes(word)),
   );
   return filtered.sort(
     params.get('sort') === 'popular'

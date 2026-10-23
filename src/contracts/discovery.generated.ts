@@ -44,7 +44,7 @@ export interface SearchHistoryPageDto {
 export interface SearchSuggestionDto {
   label: string;
   parameters: string;
-  source: "history" | "theme";
+  source: "history" | "theme" | "condition";
 }
 
 export interface SearchSuggestionsDto {

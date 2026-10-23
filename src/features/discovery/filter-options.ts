@@ -1,9 +1,9 @@
 import { CATEGORY_CATALOG } from '../../contracts/catalog.generated';
 export const SORT_OPTIONS = [
+  ['likes', 'お気に入りが多い順'],
   ['relevance', '一致するタイトルから'],
   ['newest', '新しい順'],
   ['oldest', '古い順'],
-  ['likes', 'いいね順'],
 ] as const;
 export const COURSES = [
   ['tankyu', '探究科'],

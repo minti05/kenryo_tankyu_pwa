@@ -319,3 +319,20 @@
     display: block;
   }
 }
+
+.condition-suggestions {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.condition-suggestions h2 {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  padding-inline: 0.75rem;
+}
+.condition-suggestions .history-list a {
+  min-height: 48px;
+}
+.condition-suggestions .history-list a span {
+  flex: 1;
+}

@@ -612,3 +612,41 @@ test('検索履歴は開き直しても5分再利用し、削除応答を使っ�
   await expect(page.getByText('検索すると、ここからもう一度たどれます。')).toBeVisible();
   expect(gets()).toBe(1);
 });
+
+for (const [device, width, height, entry] of [
+  ['スマホ', 390, 844, '/search'],
+  ['PC', 1440, 1000, '/home'],
+] as const)
+  test(`${device}: 条件候補は部分一致し、入力中は追加APIを呼ばず選択時だけ絞り込む`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    const calls = await fixture(page);
+    await page.goto('/tests/discovery-harness.html?entry=' + encodeURIComponent(entry));
+    const input = page.getByRole('searchbox');
+    await input.fill('環境');
+    const suggestions = page.getByRole('region', { name: '条件から探す候補' });
+    await expect(
+      suggestions.getByRole('link', { name: 'カテゴリ「環境問題」で探す', exact: true }),
+    ).toBeVisible();
+    const initial = calls.length;
+    await input.fill('2024');
+    await expect(
+      suggestions.getByRole('link', { name: '2024年度入学で探す', exact: true }),
+    ).toBeVisible();
+    await input.fill('普通');
+    await expect(
+      suggestions.getByRole('link', { name: '普通科で探す', exact: true }),
+    ).toBeVisible();
+    expect(calls.filter((c) => c.path.startsWith('/api/search-suggestions'))).toHaveLength(0);
+    expect(calls.length).toBe(initial);
+    await input.fill('環境 プラスチック');
+    await suggestions
+      .getByRole('link', { name: 'カテゴリ「環境問題」で「プラスチック」を検索', exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/results\?/);
+    const params = new URL(page.url()).searchParams;
+    expect(params.get('category')).toBe('environment');
+    expect(params.get('q')).toBe('プラスチック');
+    await expect(page.getByRole('combobox', { name: '並び順' })).toHaveValue('likes');
+  });
