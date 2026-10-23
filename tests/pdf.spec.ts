@@ -199,7 +199,7 @@ test('通常WelcomeはPDFエンジンを取得せず、共有URLからログイ�
   await expect(page).toHaveURL(/next=/);
   expect(pdfRequests).toHaveLength(0);
 });
-test('実SSD PDFをコピーせず表示（明示したローカル受入のみ）', async ({ page }) => {
+test('実SSD PDFをコピーせず表示（明示したローカル受入のみ）', async ({ page }, testInfo) => {
   test.skip(!process.env.TANKYU_PDF_PATH, '実PDFはGit・公開サーバーに配置しない');
   const bytes = await readFile(process.env.TANKYU_PDF_PATH!);
   const start = Date.now();
@@ -216,7 +216,7 @@ test('実SSD PDFをコピーせず表示（明示したローカル受入のみ�
     .toBe(true);
   console.log(JSON.stringify({ bytes: bytes.length, elapsedMs: Date.now() - start }));
   await page.screenshot({
-    path: process.env.TANKYU_PDF_SCREENSHOT ?? '/private/tmp/tankyu-t09-real-pdf.png',
+    path: process.env.TANKYU_PDF_SCREENSHOT ?? testInfo.outputPath('real-pdf.png'),
     fullPage: true,
   });
 });

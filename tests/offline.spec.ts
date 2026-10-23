@@ -386,7 +386,7 @@ for (const [name, width, height] of [
   ['iPad', 820, 1180],
   ['PC', 1440, 1000],
 ] as const)
-  test(`${name}: 保存一覧・容量・削除・横幅`, async ({ page, context }) => {
+  test(`${name}: 保存一覧・容量・削除・横幅`, async ({ page, context }, testInfo) => {
     await page.setViewportSize({ width, height });
     await fixture(page, context);
     await save(page);
@@ -397,7 +397,7 @@ for (const [name, width, height] of [
       true,
     );
     if (name === 'iPad')
-      await page.screenshot({ path: '/private/tmp/tankyu-t10-saved-ipad.png', fullPage: true });
+      await page.screenshot({ path: testInfo.outputPath('saved-ipad.png'), fullPage: true });
     const day = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' });
     await page.getByLabel('保存日の開始').fill(day);
     await page.getByLabel('保存日の終了').fill(day);
