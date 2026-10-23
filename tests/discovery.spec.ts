@@ -51,25 +51,31 @@ async function fixture(page: Page) {
         ],
         nextCursor: null,
       };
-    else if (url.pathname === '/api/awards') {
-      const awarded = { ...first, awardType: 2, awardName: 'プレゼン賞' };
+    else if (url.pathname === '/api/awards/collection') {
       body = {
         version: '1',
-        items: url.searchParams.get('award') === '1' ? [] : [awarded],
         nextCursor: null,
-        awardOverview: {
-          editions: [
-            { enterYear: 2024, count: 33 },
-            { enterYear: 2023, count: 22 },
-          ],
-          prizes: [
-            { awardType: 1, count: 1 },
-            { awardType: 2, count: 7 },
-            { awardType: 3, count: 20 },
-            { awardType: 4, count: 5 },
-          ],
-          names: [{ name: 'プレゼン賞', count: 5 }],
-        },
+        items: [
+          ...Array.from({ length: 33 }, (_, i) => ({
+            ...first,
+            documentID: String(24000010 + i * 10),
+            title: i === 0 ? first.title : `${first.title} ${i + 1}`,
+            awardType: i === 32 ? 1 : i < 7 ? 2 : i < 27 ? 3 : 4,
+            ...(i < 5 ? { awardName: 'プレゼン賞' } : {}),
+            favoriteCount: 55 - i,
+            isFavorite: false,
+            favoriteRevision: 0,
+          })),
+          ...Array.from({ length: 22 }, (_, i) => ({
+            ...second,
+            documentID: String(23000010 + i * 10),
+            title: `${second.title} ${i + 1}`,
+            awardType: 3,
+            favoriteCount: 0,
+            isFavorite: false,
+            favoriteRevision: 0,
+          })),
+        ],
       };
     } else if (url.pathname === '/api/discovery')
       body = { version: '1', items: [first], nextCursor: null };
@@ -136,18 +142,10 @@ test('KRGP条件と詳細から一覧へ戻る', async ({ page }) => {
   await page.getByRole('button', { name: /フィルター/ }).click();
   await page.getByRole('searchbox', { name: 'キーワード', exact: true }).fill('水');
   await page.getByRole('button', { name: 'この条件で検索' }).click();
-  await expect
-    .poll(() =>
-      calls.some(
-        (c) =>
-          c.path.startsWith('/api/awards?') &&
-          c.path.includes('awardName=') &&
-          c.path.includes('q='),
-      ),
-    )
-    .toBeTruthy();
+  await expect.poll(() => calls.some((c) => c.path === '/api/awards/collection')).toBeTruthy();
   await page.getByRole('link', { name: '架空の水の探究の詳細' }).click();
-  await expect(page.getByRole('heading', { name: '架空の水の探究' })).toBeVisible();
+  await expect(page).toHaveURL(/\/works\/24000010/);
+  await expect(page.getByRole('heading', { name: '架空の水の探究', exact: true })).toBeVisible();
   await page.getByRole('link', { name: '一覧へ戻る' }).click();
   await expect(page).toHaveURL(/award=2/);
 });
@@ -710,17 +708,71 @@ for (const [name, width, height] of [
     await expect(page.locator('.awards-edition-summary')).toContainText('2024年度入学');
     await page.getByLabel('KRGPの賞名', { exact: true }).selectOption('プレゼン賞');
     await expect(page).toHaveURL(/awardName=/);
-    await expect(page.locator('article').getByText('優秀賞', { exact: true })).toBeVisible();
-    await expect(page.locator('article').getByText('プレゼン賞', { exact: true })).toBeVisible();
+    await expect(
+      page.locator('article').first().getByText('優秀賞', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.locator('article').first().getByText('プレゼン賞', { exact: true }),
+    ).toBeVisible();
     await page.getByRole('button', { name: '大賞 1', exact: true }).click();
     await expect(page).toHaveURL(/award=1/);
     await expect(page.getByText('この条件の受賞作品はありません。')).toBeVisible();
-    expect(
-      calls.some((c) => c.path.includes('/api/awards?') && c.path.includes('year=2024')),
-    ).toBeTruthy();
+    expect(calls.filter((c) => c.path === '/api/awards/collection').length === 1).toBeTruthy();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
     await page.getByRole('button', { name: '条件をリセット', exact: true }).click();
-    await expect(page.locator('article')).toHaveCount(1);
+    await expect(page.locator('article')).toHaveCount(20);
   });
+
+test('KRGPは条件変更・追加表示・詳細からの復帰で作品を再取得しない', async ({ page }) => {
+  const calls = await fixture(page);
+  await page.goto('/tests/discovery-harness.html?entry=/awards');
+  await expect(page.locator('article')).toHaveCount(20);
+  await page.getByRole('button', { name: 'さらに表示', exact: true }).click();
+  await expect(page.locator('article')).toHaveCount(40);
+  await page.getByRole('button', { name: 'KRGP 2024 22', exact: true }).click();
+  await expect(page.locator('article')).toHaveCount(20);
+  await page.getByLabel('並び順', { exact: true }).selectOption('oldest');
+  await page.getByRole('button', { name: 'KRGP 2025 33', exact: true }).click();
+  await page.getByLabel('並び順', { exact: true }).selectOption('likes');
+  await page.getByRole('link', { name: '架空の水の探究の詳細', exact: true }).click();
+  await page.getByRole('link', { name: '一覧へ戻る', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'KRGP 2025 33', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(calls.filter((c) => c.path === '/api/awards/collection')).toHaveLength(1);
+  expect(calls.some((c) => c.path.startsWith('/api/awards?'))).toBe(false);
+  await page.getByRole('button', { name: '作品情報を更新', exact: true }).click();
+  await expect.poll(() => calls.filter((c) => c.path === '/api/awards/collection').length).toBe(2);
+});
+test('KRGPのお気に入り操作はキャッシュに残り、条件を変えても戻らない', async ({ page }) => {
+  const calls = await fixture(page);
+  await page.route('**/api/favorites/24000010', (route) =>
+    route.fulfill({ json: { version: '1', favorite: true, count: 56, revision: 1 } }),
+  );
+  await page.goto('/tests/discovery-harness.html?entry=/awards');
+  await page
+    .locator('article')
+    .first()
+    .getByRole('button', { name: 'お気に入りに追加', exact: true })
+    .click();
+  await expect(
+    page
+      .locator('article')
+      .first()
+      .getByRole('button', { name: 'お気に入りから外す', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: 'KRGP 2024 22', exact: true }).click();
+  await page.getByRole('button', { name: 'KRGP 2025 33', exact: true }).click();
+  await expect(
+    page
+      .locator('article')
+      .first()
+      .getByRole('button', { name: 'お気に入りから外す', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('article').first().getByLabel('56件のいいね')).toBeVisible();
+  expect(calls.filter((c) => c.path === '/api/awards/collection')).toHaveLength(1);
+  expect(calls.filter((c) => /\/state$/.test(c.path))).toHaveLength(0);
+});

@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { awardsQueryKey, awardsView, AWARDS_FRESH_MS } from './awards-cache';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { ArrowDownWideNarrow, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowDownWideNarrow, RefreshCw, X } from 'lucide-react';
 import type { SearchPageDto } from '../../contracts/discovery.generated';
 import { useAuth } from '../auth/context';
 import { LiveWorkCard } from './LiveWorkCard';
@@ -31,26 +32,28 @@ function AwardsCollection() {
   const raw = params.toString();
   const positionKey = `krgp-position:${session?.uid}:${raw}`;
   const restored = useRef('');
-  const works = useInfiniteQuery({
-    queryKey: ['works', session?.uid, '/api/awards', raw],
+  const works = useQuery({
+    queryKey: awardsQueryKey(session?.uid),
     enabled: !!session,
-    initialPageParam: null as string | null,
-    queryFn: ({ pageParam, signal }) => {
-      const p = new URLSearchParams(raw);
-      p.delete('cursor');
-      if (pageParam) p.set('cursor', pageParam);
-      return request<SearchPageDto>(`/api/awards?${p}`, { signal });
-    },
-    getNextPageParam: (last) => last.nextCursor ?? undefined,
-    staleTime: 60000,
-    gcTime: 300000,
+    queryFn: ({ signal }) => request<SearchPageDto>('/api/awards/collection', { signal }),
+    staleTime: AWARDS_FRESH_MS,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
-  const overview = works.data?.pages[0]?.awardOverview;
-  const items = [
-    ...new Map(
-      works.data?.pages.flatMap((p) => p.items).map((w) => [w.documentID, w]) ?? [],
-    ).values(),
-  ];
+  const savedPosition = useMemo(() => readPosition(positionKey), [positionKey]);
+  const [pagination, setPagination] = useState(() => ({ raw, count: savedPosition.count }));
+  const visibleCount = pagination.raw === raw ? pagination.count : savedPosition.count;
+  let invalid = false;
+  let view: ReturnType<typeof awardsView> | undefined;
+  try {
+    view = awardsView(works.data?.items ?? [], params);
+  } catch {
+    invalid = true;
+  }
+  const overview = works.data ? view?.overview : undefined;
+  const allItems = view?.items ?? [];
+  const items = allItems.slice(0, visibleCount);
   const year = params.get('year') ?? '';
   const award = params.get('award') ?? '';
   const count = overview?.prizes.reduce((sum, p) => sum + p.count, 0);
@@ -62,7 +65,7 @@ function AwardsCollection() {
     restored.current = positionKey;
     let y = 0;
     try {
-      y = Number(sessionStorage.getItem(positionKey)) || 0;
+      y = readPosition(positionKey).top;
     } catch {
       /* optional */
     }
@@ -77,6 +80,7 @@ function AwardsCollection() {
       /* optional */
     }
     restored.current = '';
+    setPagination({ raw: next.toString(), count: 20 });
     setParams(next);
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -164,6 +168,15 @@ function AwardsCollection() {
               {count !== undefined && <span>受賞 {count}作品</span>}
             </div>
             <div className="awards-tool-actions">
+              <button
+                className="icon-button"
+                aria-label="作品情報を更新"
+                title="作品情報を更新"
+                disabled={works.isFetching}
+                onClick={() => void works.refetch()}
+              >
+                <RefreshCw size={18} />
+              </button>
               <SearchFilters params={params} awards={false} onApply={apply} />
               <label className="results-sort">
                 <ArrowDownWideNarrow size={18} />
@@ -201,7 +214,9 @@ function AwardsCollection() {
               </div>
             )}
           </div>
-          {works.isPending ? (
+          {invalid ? (
+            <p role="alert">検索条件を確認してください。</p>
+          ) : works.isPending ? (
             <p className="awards-status" role="status">
               受賞作品を読み込んでいます…
             </p>
@@ -219,7 +234,10 @@ function AwardsCollection() {
                 onClickCapture={(event) => {
                   if ((event.target as Element).closest('a[href^="/works/"]'))
                     try {
-                      sessionStorage.setItem(positionKey, String(window.scrollY));
+                      sessionStorage.setItem(
+                        positionKey,
+                        JSON.stringify({ top: window.scrollY, count: visibleCount }),
+                      );
                     } catch {
                       /* optional */
                     }
@@ -247,13 +265,12 @@ function AwardsCollection() {
                   {items.length}作品を表示
                 </p>
               )}
-              {works.hasNextPage && (
+              {allItems.length > visibleCount && (
                 <button
                   className="button secondary"
-                  disabled={works.isFetchingNextPage}
-                  onClick={() => void works.fetchNextPage()}
+                  onClick={() => setPagination({ raw, count: visibleCount + 20 })}
                 >
-                  {works.isFetchingNextPage ? '読み込み中…' : 'さらに表示'}
+                  さらに表示
                 </button>
               )}
             </>
@@ -262,4 +279,26 @@ function AwardsCollection() {
       </div>
     </div>
   );
+}
+
+function readPosition(key: string): { top: number; count: number } {
+  try {
+    const value: unknown = JSON.parse(sessionStorage.getItem(key) ?? 'null');
+    if (typeof value === 'number' && Number.isFinite(value))
+      return { top: Math.max(0, value), count: 20 };
+    if (
+      value &&
+      typeof value === 'object' &&
+      'top' in value &&
+      'count' in value &&
+      typeof value.top === 'number' &&
+      Number.isFinite(value.top) &&
+      typeof value.count === 'number' &&
+      Number.isInteger(value.count)
+    )
+      return { top: Math.max(0, value.top), count: Math.min(2000, Math.max(20, value.count)) };
+  } catch {
+    /* Position storage is optional. */
+  }
+  return { top: 0, count: 20 };
 }

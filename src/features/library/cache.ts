@@ -5,7 +5,8 @@ import type {
   StatsDto,
   ViewRecordedDto,
 } from '../../contracts/library.generated';
-import type { SearchWorkDto } from '../../contracts/discovery.generated';
+import { awardsQueryKey } from '../discovery/awards-cache';
+import type { SearchPageDto, SearchWorkDto } from '../../contracts/discovery.generated';
 type Pages = InfiniteData<LibraryPageDto, string>;
 function change(query: QueryClient, uid: string, update: (data: Pages, kind: string) => Pages) {
   for (const [key, data] of query.getQueriesData<Pages>({ queryKey: ['library', uid] })) {
@@ -42,6 +43,29 @@ export async function cacheFavorite(
   value: FavoriteDto,
 ) {
   await query.cancelQueries({ queryKey: ['library', uid] });
+  const krgpKey = awardsQueryKey(uid);
+  await query.cancelQueries({ queryKey: krgpKey, exact: true });
+  const collection = query.getQueryData<SearchPageDto>(krgpKey);
+  if (collection) {
+    const updatedAt = query.getQueryState(krgpKey)?.dataUpdatedAt;
+    query.setQueryData(
+      krgpKey,
+      {
+        ...collection,
+        items: collection.items.map((item) =>
+          item.documentID === work.documentID
+            ? {
+                ...item,
+                favoriteCount: value.count,
+                isFavorite: value.favorite,
+                favoriteRevision: value.revision,
+              }
+            : item,
+        ),
+      },
+      updatedAt === undefined ? undefined : { updatedAt },
+    );
+  }
   const updated = {
     ...work,
     favoriteCount: value.count,
