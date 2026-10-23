@@ -4,8 +4,17 @@ import { ArrowUpRight } from 'lucide-react';
 import type { SearchWorkDto } from '../../contracts/discovery.generated';
 import { CategoryArt } from '../../components/CategoryArt';
 import { categoryLabel, documentTypes, DOCUMENT_LABELS } from './search';
+import { AWARDS } from './filter-options';
 import styles from './WorkCard.module.css';
-export function LiveWorkCard({ work, from }: { work: SearchWorkDto; from: string }) {
+export function LiveWorkCard({
+  work,
+  from,
+  showAwardDetails = false,
+}: {
+  work: SearchWorkDto;
+  from: string;
+  showAwardDetails?: boolean;
+}) {
   const link = `/works/${work.documentID}?from=${encodeURIComponent(from)}`;
   return (
     <article className={styles.card}>
@@ -41,12 +50,20 @@ export function LiveWorkCard({ work, from }: { work: SearchWorkDto; from: string
               .join('・')}
           </span>
         </div>
+        {showAwardDetails && work.awardType && (
+          <div className={styles.awardLabels}>
+            <span data-prize={work.awardType}>
+              {AWARDS.find(([id]) => id === String(work.awardType))?.[1]}
+            </span>
+            {work.awardName && <span>{work.awardName}</span>}
+          </div>
+        )}
         <h3>
           <Link to={link}>{work.title}</Link>
         </h3>
         <div className={styles.bottom}>
           <span>{work.author}</span>
-          {work.awardType && <span>KRGP受賞</span>}
+          {work.awardType && !showAwardDetails && <span>KRGP受賞</span>}
           {work.isFavorite !== undefined && <FavoriteButton work={work} showCount />}
         </div>
       </div>

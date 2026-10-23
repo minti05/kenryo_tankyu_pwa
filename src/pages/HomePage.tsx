@@ -21,7 +21,7 @@ export default function HomePage() {
         <Trophy size={40} strokeWidth={1.5} />
         <div>
           <h2>KRGP受賞作品</h2>
-          <p>先輩たちの探究を、年度・賞からたどる。</p>
+          <p>先輩たちの探究を、開催年・賞からたどる。</p>
         </div>
         <ArrowRight size={22} />
       </Link>

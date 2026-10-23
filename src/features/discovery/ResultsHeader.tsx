@@ -37,7 +37,9 @@ export function ResultsHeader({ source }: { source?: string }) {
         <strong>
           {category?.label ||
             ((source?.split('?')[0] ?? location.pathname) === '/awards'
-              ? 'KRGP受賞作品'
+              ? params.get('year')
+                ? `KRGP ${Number(params.get('year')) + 1}`
+                : 'KRGP受賞作品'
               : 'すべての作品')}
         </strong>
       </div>

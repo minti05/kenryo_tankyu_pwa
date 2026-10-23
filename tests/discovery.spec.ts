@@ -51,7 +51,27 @@ async function fixture(page: Page) {
         ],
         nextCursor: null,
       };
-    else if (url.pathname === '/api/discovery')
+    else if (url.pathname === '/api/awards') {
+      const awarded = { ...first, awardType: 2, awardName: 'プレゼン賞' };
+      body = {
+        version: '1',
+        items: url.searchParams.get('award') === '1' ? [] : [awarded],
+        nextCursor: null,
+        awardOverview: {
+          editions: [
+            { enterYear: 2024, count: 33 },
+            { enterYear: 2023, count: 22 },
+          ],
+          prizes: [
+            { awardType: 1, count: 1 },
+            { awardType: 2, count: 7 },
+            { awardType: 3, count: 20 },
+            { awardType: 4, count: 5 },
+          ],
+          names: [{ name: 'プレゼン賞', count: 5 }],
+        },
+      };
+    } else if (url.pathname === '/api/discovery')
       body = { version: '1', items: [first], nextCursor: null };
     else if (/^\/api\/works\/\d{8}\/state$/.test(url.pathname))
       body = { version: '1', favorite: false, revision: 0, count: 7 };
@@ -111,9 +131,9 @@ test('検索専用画面で履歴を保存し、再検索・削除できる', as
 test('KRGP条件と詳細から一覧へ戻る', async ({ page }) => {
   const calls = await fixture(page);
   await page.goto('/tests/discovery-harness.html?entry=' + encodeURIComponent('/awards?year=2024'));
+  await page.getByRole('button', { name: '優秀賞 7', exact: true }).click();
+  await page.getByRole('combobox', { name: 'KRGPの賞名', exact: true }).selectOption('プレゼン賞');
   await page.getByRole('button', { name: /フィルター/ }).click();
-  await page.getByRole('combobox', { name: '賞', exact: true }).selectOption('2');
-  await page.getByRole('textbox', { name: '賞名', exact: true }).fill('プレゼン');
   await page.getByRole('searchbox', { name: 'キーワード', exact: true }).fill('水');
   await page.getByRole('button', { name: 'この条件で検索' }).click();
   await expect
@@ -674,3 +694,33 @@ test('生徒の設定には管理者の表示切替を出さない', async ({ pa
   await expect(page.getByText('生徒 · 入学年度未登録')).toBeVisible();
   await expect(page.getByLabel('表示する権限', { exact: true })).toHaveCount(0);
 });
+
+for (const [name, width, height] of [
+  ['スマホ', 390, 844],
+  ['PC', 1440, 1000],
+] as const)
+  test(`${name}: KRGP開催年は入学年度の翌年、賞名と賞で絞り込める`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    const calls = await fixture(page);
+    await page.goto('/tests/discovery-harness.html?entry=/awards');
+    await expect(page.getByRole('button', { name: 'KRGP 2025 33' })).toBeVisible();
+    await page.getByRole('button', { name: 'KRGP 2025 33' }).click();
+    await expect(page).toHaveURL(/year=2024/);
+    await expect(page.locator('.result-category-title')).toHaveText('KRGP 2025');
+    await expect(page.locator('.awards-edition-summary')).toContainText('2024年度入学');
+    await page.getByLabel('KRGPの賞名', { exact: true }).selectOption('プレゼン賞');
+    await expect(page).toHaveURL(/awardName=/);
+    await expect(page.locator('article').getByText('優秀賞', { exact: true })).toBeVisible();
+    await expect(page.locator('article').getByText('プレゼン賞', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '大賞 1', exact: true }).click();
+    await expect(page).toHaveURL(/award=1/);
+    await expect(page.getByText('この条件の受賞作品はありません。')).toBeVisible();
+    expect(
+      calls.some((c) => c.path.includes('/api/awards?') && c.path.includes('year=2024')),
+    ).toBeTruthy();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.getByRole('button', { name: '条件をリセット', exact: true }).click();
+    await expect(page.locator('article')).toHaveCount(1);
+  });

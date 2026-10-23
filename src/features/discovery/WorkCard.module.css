@@ -227,3 +227,22 @@
   color: var(--text);
   border-color: var(--line);
 }
+
+.awardLabels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 9px;
+  font-size: 0.625rem;
+}
+.awardLabels span {
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.awardLabels [data-prize='1'] {
+  background: #e8cf95;
+  color: #533b13;
+  font-weight: 700;
+}

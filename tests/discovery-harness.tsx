@@ -1,3 +1,4 @@
+import AwardsPage from '../src/features/discovery/AwardsPage';
 import { DisplayProvider } from '../src/features/auth/DisplayProvider';
 import { StrictMode, Fragment } from 'react';
 // Test-only entry; never imported by src or included in normal build.
@@ -105,7 +106,7 @@ createRoot(document.getElementById('root')!).render(
                   path="awards"
                   element={
                     <SearchGate>
-                      <ResultsPage awards />
+                      <AwardsPage />
                     </SearchGate>
                   }
                 />

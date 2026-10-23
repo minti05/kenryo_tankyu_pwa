@@ -15,6 +15,7 @@ const SearchGate = lazy(() => import('../features/auth/RequireSession'));
 const WorkPage = lazy(() => import('../features/works/WorkPage'));
 const AccountPage = lazy(() => import('../features/auth/AccountPage'));
 const ExplorePage = lazy(() => import('../features/discovery/ExplorePage'));
+const AwardsPage = lazy(() => import('../features/discovery/AwardsPage'));
 const ResultsPage = lazy(() => import('../features/discovery/ResultsPage'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'));
 const preview = PREVIEW_ENABLED
@@ -92,7 +93,7 @@ export default function App() {
                     path="awards"
                     element={
                       <SearchGate>
-                        <ResultsPage awards />
+                        <AwardsPage />
                       </SearchGate>
                     }
                   />

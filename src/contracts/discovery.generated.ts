@@ -28,6 +28,7 @@ export interface SearchPageDto {
   version: "1";
   items: SearchWorkDto[];
   nextCursor: string | null;
+  awardOverview?: AwardOverviewDto;
 }
 
 export interface SearchHistoryDto {
@@ -50,4 +51,10 @@ export interface SearchSuggestionDto {
 export interface SearchSuggestionsDto {
   version: "1";
   items: SearchSuggestionDto[];
+}
+
+export interface AwardOverviewDto {
+  editions: { enterYear: number; count: number; }[];
+  prizes: { awardType: number; count: number; }[];
+  names: { name: string; count: number; }[];
 }
