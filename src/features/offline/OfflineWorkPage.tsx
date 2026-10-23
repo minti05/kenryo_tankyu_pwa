@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/context';
 import {
   cacheTime,
@@ -10,8 +10,8 @@ import {
   type SavedPdf,
   type CachedPdf,
 } from './store';
-import { safePdfName } from '../works/pdf-data';
-import { DOCUMENT_LABELS } from '../discovery/search';
+import { orderDocuments } from '../discovery/search';
+import { WorkReader } from '../works/WorkReader';
 const Viewer = lazy(() => import('../works/PdfViewer'));
 export default function OfflineWorkPage() {
   const { id = '' } = useParams(),
@@ -20,8 +20,7 @@ export default function OfflineWorkPage() {
     [rows, setRows] = useState<SavedPdf[]>([]),
     [data, setData] = useState<(CachedPdf & { url: string }) | null>(null),
     [checking, setChecking] = useState(true),
-    [error, setError] = useState(''),
-    [prepared, setPrepared] = useState(0);
+    [error, setError] = useState('');
   const kind = params.get('kind') ?? rows[0]?.kind;
   useEffect(() => {
     let closed = false,
@@ -31,11 +30,10 @@ export default function OfflineWorkPage() {
       const ticket = ++requestId;
       setChecking(true);
       setData(null);
-      setPrepared(0);
       if (url) URL.revokeObjectURL(url);
       try {
         if (!cacheSession) throw new Error('identity');
-        const list = (await listSaved(cacheSession)).filter((r) => r.id === id);
+        const list = orderDocuments((await listSaved(cacheSession)).filter((r) => r.id === id));
         const pdf = await readSaved(cacheSession, id, kind ?? list[0]?.kind ?? 'poster');
         if (closed || ticket !== requestId) return;
         setRows(list);
@@ -81,7 +79,6 @@ export default function OfflineWorkPage() {
       if (!usable(cacheSession, data)) {
         URL.revokeObjectURL(data.url);
         setData(null);
-        setPrepared(0);
         setError(
           '保存期限が切れたか、端末時刻の確認が必要です。通信に接続して作品を開き直してください。',
         );
@@ -91,86 +88,41 @@ export default function OfflineWorkPage() {
     timer = setTimeout(check, Math.min(1000, Math.max(1, data.expiresAt - cacheTime())));
     return () => clearTimeout(timer);
   }, [data, cacheSession]);
-  async function prepare() {
-    if (!cacheSession || !data) return;
-    try {
-      const fresh = await readSaved(cacheSession, id, data.kind, data.revision);
-      if (fresh && usable(cacheSession, fresh)) setPrepared(performance.now());
-      else {
-        URL.revokeObjectURL(data.url);
-        setData(null);
-        setError('保存期限が切れました。通信に接続して確認してください。');
-      }
-    } catch {
-      setPrepared(0);
-      setError('保存資料を確認できませんでした。');
-    }
-  }
-  return (
-    <div className="page-container">
-      <Link to="/saved">← 端末の保存へ</Link>
-      <p role="status">
-        オフライン · 保存済みの版を表示します。最新の公開状態は通信に接続したときに確認します。
-      </p>
-      <h1>{data?.work.title ?? '保存した資料'}</h1>
-      <div role="group" aria-label="保存済み資料の種類">
-        {rows.map((r) => (
-          <button
-            className="button secondary"
-            key={r.key}
-            aria-pressed={r.kind === kind}
-            onClick={() => setParams({ kind: r.kind })}
-          >
-            {DOCUMENT_LABELS[r.kind as keyof typeof DOCUMENT_LABELS]}
-          </button>
-        ))}
+  if (!checking && (!data || !cacheSession))
+    return (
+      <div className="page-container">
+        <h1>保存した資料</h1>
+        {checking ? (
+          <p role="status">期限と保存資料を確認しています…</p>
+        ) : (
+          <p role="alert">{error}</p>
+        )}
       </div>
-      {checking ? (
-        <p role="status">期限と保存資料を確認しています…</p>
-      ) : error ? (
-        <p role="alert">{error}</p>
-      ) : (
-        data &&
-        cacheSession && (
-          <>
-            <p>
-              {data.work.author} · 期限{' '}
-              {new Date(data.expiresAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
-            </p>
-            {data.work.summary && <p>{data.work.summary}</p>}
-            <Suspense fallback={<p>PDF表示を準備しています…</p>}>
-              <Viewer blob={data.blob} onReady={() => {}} />
-            </Suspense>
-            <section>
-              <h2>資料を手元に</h2>
-              <p>
-                手動で保存したPDFは3日後も自動削除されません。学校の利用規約を守ってご利用ください。
-              </p>
-              <button className="button primary" onClick={() => void prepare()}>
-                ダウンロード
-              </button>
-              {prepared > 0 && (
-                <a
-                  className="button secondary"
-                  href={data.url}
-                  download={safePdfName(id, data.kind, data.work.title)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => {
-                    if (performance.now() - prepared > 5000 || !usable(cacheSession, data)) {
-                      e.preventDefault();
-                      setPrepared(0);
-                      void prepare();
-                    }
-                  }}
-                >
-                  PDFを端末に保存
-                </a>
-              )}
-            </section>
-          </>
-        )
-      )}
-    </div>
+    );
+  return (
+    <WorkReader
+      work={data?.work}
+      kind={data?.kind}
+      documents={(data ? rows : []).map((row) => ({
+        kind: row.kind as 'poster' | 'report' | 'thesis' | 'slide',
+        state: 'available',
+        bytes: row.bytes,
+        revision: row.revision,
+        sha256: row.sha256,
+      }))}
+      onKind={(nextKind) => {
+        const next = new URLSearchParams(params);
+        next.set('kind', nextKind);
+        setParams(next, { replace: true });
+      }}
+    >
+      <Suspense fallback={<p role="status">PDF表示を準備しています…</p>}>
+        {data && cacheSession ? (
+          <Viewer blob={data.blob} onReady={() => {}} />
+        ) : (
+          <p role="status">期限と保存資料を確認しています…</p>
+        )}
+      </Suspense>
+    </WorkReader>
   );
 }

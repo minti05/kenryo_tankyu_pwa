@@ -1,5 +1,5 @@
 let pending: Promise<void> | undefined;
-export function preparePdfAssets() {
+export function preparePdfAssets(options: { background?: boolean } = {}) {
   return (pending ??= (async () => {
     if (!('serviceWorker' in navigator)) throw new Error('offline_viewer_unavailable');
     const registration = await Promise.race([
@@ -22,7 +22,9 @@ export function preparePdfAssets() {
         if (event.data?.ok) resolve();
         else reject(new Error('offline_viewer_unavailable'));
       };
-      worker.postMessage({ type: 'PREPARE_PDF_ASSETS' }, [channel.port2]);
+      worker.postMessage({ type: 'PREPARE_PDF_ASSETS', background: options.background === true }, [
+        channel.port2,
+      ]);
     });
   })().finally(() => {
     pending = undefined;

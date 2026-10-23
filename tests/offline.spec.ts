@@ -45,12 +45,41 @@ async function fixture(page: Page, context: BrowserContext) {
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
   return { calls, state };
 }
+async function expectPixels(page: Page) {
+  await expect
+    .poll(
+      () =>
+        page
+          .getByRole('region', { name: 'PDFビューア', exact: true })
+          .locator('img')
+          .evaluateAll((images) =>
+            images.some((image) => (image as HTMLImageElement).naturalWidth > 0),
+          ),
+      { timeout: 25000 },
+    )
+    .toBe(true);
+}
+async function waitSaved(page: Page) {
+  await expectPixels(page);
+  await expect.poll(async () => (await rows(page)).length).toBeGreaterThan(0);
+  const manifest = (await (await page.request.get('/pdf-offline-manifest.json')).json()) as {
+    files: { url: string }[];
+  };
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async (files) => {
+          const cache = await caches.open('tankyu-pdf-assets-v1');
+          return (await Promise.all(files.map((file) => cache.match(file.url)))).every(Boolean);
+        }, manifest.files),
+      { timeout: 30000 },
+    )
+    .toBe(true);
+  await expect(page.getByText('この端末に3日間保存しました。', { exact: true })).toHaveCount(0);
+}
 async function save(page: Page) {
   await page.goto('/works/24000010');
-  await expect(page.getByText('この端末に3日間保存しました。', { exact: true })).toBeVisible({
-    timeout: 90000,
-  });
-  await expect(page.getByRole('button', { name: '次のページ' })).toBeEnabled();
+  await waitSaved(page);
 }
 async function rows(page: Page) {
   return page.evaluate(async () => {
@@ -87,17 +116,29 @@ test('閲覧した種類だけ保存・完全オフラインの再起動・表�
     page.getByText('オフラインです。以前ログインした同じアカウントの保存資料だけを開けます。'),
   ).toBeVisible();
   await page.getByRole('link', { name: /架空のオフライン作品/ }).click();
-  await expect(page.getByRole('button', { name: '次のページ' })).toBeEnabled();
-  await page.getByRole('button', { name: '次のページ' }).click();
-  await expect(page.getByText('2 / 2 ページ')).toBeVisible();
-  await page.getByRole('button', { name: 'ダウンロード', exact: true }).click();
+  await expect
+    .poll(
+      () =>
+        page
+          .getByRole('region', { name: 'PDFビューア', exact: true })
+          .locator('img')
+          .evaluateAll((images) => images.some((el) => (el as HTMLImageElement).naturalWidth > 0)),
+      { timeout: 20000 },
+    )
+    .toBe(true);
+  await expectPixels(page);
+  await page.getByRole('region', { name: 'PDFビューア', exact: true }).hover();
+  await page.mouse.wheel(0, 400);
+  await expectPixels(page);
+  await page.getByRole('button', { name: 'PDFダウンロード', exact: true }).click();
+  await page.getByRole('button', { name: '同意して進む', exact: true }).click();
   await expect(page.getByRole('link', { name: 'PDFを端末に保存' })).toBeVisible();
   expect((await rows(page))[0]!.expiresAt).toBe(before[0]!.expiresAt);
   expect(await calls()).toHaveLength(count);
   const missing = new URL('/works/24000010?kind=report', page.url()).href;
   await page.goto(missing);
   await expect(page.getByRole('alert')).toContainText('未保存');
-  await page.goto('/explore');
+  await page.goto('/results');
   await expect(page.getByRole('heading', { name: 'オフラインです' })).toBeVisible();
   expect(await calls()).toHaveLength(count);
 });
@@ -108,7 +149,7 @@ test('オンライン再閲覧はHEADで再認可しGETを繰り返さず、更�
   await page.evaluate(() => caches.delete('tankyu-pdf-assets-v1'));
   await page.goto('/saved');
   await page.goto('/works/24000010');
-  await expect(page.getByText('この端末に3日間保存しました。', { exact: true })).toBeVisible();
+  await waitSaved(page);
   expect((await calls()).filter((c) => c === 'GET /api/works/24000010/pdf/poster')).toHaveLength(1);
   expect((await calls()).some((c) => c === 'HEAD /api/works/24000010/pdf/poster')).toBe(true);
   expect((await rows(page))[0]!.onlineViewedAt).toBeGreaterThanOrEqual(first.onlineViewedAt);
@@ -116,11 +157,12 @@ test('オンライン再閲覧はHEADで再認可しGETを繰り返さず、更�
     await page.evaluate(
       async () => (await (await caches.open('tankyu-pdf-assets-v1')).keys()).length,
     ),
-  ).toBeGreaterThan(200);
+  ).toBeGreaterThan(10);
   await state({ rev: 'b'.repeat(64) });
   await page.goto('/saved');
   await page.goto('/works/24000010');
-  await expect(page.getByText('この端末に3日間保存しました。', { exact: true })).toBeVisible();
+  await waitSaved(page);
+  await expect.poll(async () => (await rows(page))[0]?.revision).toBe('b'.repeat(64));
   const updated = await rows(page);
   expect(updated).toHaveLength(1);
   expect(updated[0]!.revision).toBe('b'.repeat(64));
@@ -131,11 +173,14 @@ test('72時間ちょうどで表示中のPDF・保存リンクを破棄する', 
   const entry = (await rows(page))[0]!;
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole('button', { name: '次のページ' })).toBeEnabled();
+  await expectPixels(page);
+  await page.getByRole('button', { name: 'PDFダウンロード', exact: true }).click();
+  await page.getByRole('button', { name: '同意して進む', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'PDFを端末に保存' })).toBeVisible();
   await page.clock.install();
   await page.clock.setSystemTime(entry.expiresAt + 10);
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-  await expect(page.locator('canvas')).toHaveCount(0);
+  await expect(page.locator('embedpdf-container')).toHaveCount(0);
   expect(await rows(page)).toHaveLength(0);
   await expect(page.getByRole('link', { name: 'PDFを端末に保存' })).toHaveCount(0);
 });
@@ -145,14 +190,14 @@ test('失効403は保存を消し、503ではオフラインのふりで本文�
   await state({ status: 503 });
   await page.reload();
   await expect(page.getByRole('heading', { name: '学校のアカウントでログイン' })).toBeVisible();
-  await expect(page.locator('canvas')).toHaveCount(0);
+  await expect(page.locator('embedpdf-container')).toHaveCount(0);
   await state({ status: 403 });
   await page.reload();
   await expect(page.getByRole('heading', { name: '学校のアカウントでログイン' })).toBeVisible();
   await expect.poll(async () => (await rows(page)).length).toBe(0);
   await context.setOffline(true);
   await page.reload();
-  await expect(page.locator('canvas')).toHaveCount(0);
+  await expect(page.locator('embedpdf-container')).toHaveCount(0);
 });
 test('ログアウトは別タブの表示も閉じ、別UIDと初回オフラインは開けない', async ({
   page,
@@ -162,19 +207,24 @@ test('ログアウトは別タブの表示も閉じ、別UIDと初回オフラ�
   await save(page);
   const other = await context.newPage();
   await other.goto('/works/24000010');
-  await expect(other.getByRole('button', { name: '次のページ' })).toBeEnabled();
+  await expectPixels(other);
+  // Warm both document buffers in the other tab before revoking its session.
+  await other.getByRole('button', { name: 'レポート', exact: true }).click();
+  await expectPixels(other);
+  await other.getByRole('button', { name: 'ポスター', exact: true }).click();
+  await expectPixels(other);
   await page.goto('/account');
   await page.getByRole('button', { name: 'ログアウト', exact: true }).click();
-  await expect(other.locator('canvas')).toHaveCount(0);
+  await expect(other.locator('embedpdf-container')).toHaveCount(0);
   expect(await rows(page)).toHaveLength(0);
   await context.setOffline(true);
   await other.reload();
-  await expect(other.locator('canvas')).toHaveCount(0);
+  await expect(other.locator('embedpdf-container')).toHaveCount(0);
   await other.evaluate(() => {
     localStorage.setItem('offline-fixture-user', 'fixture-bob');
     window.dispatchEvent(new Event('offline-fixture-user'));
   });
-  await expect(other.locator('canvas')).toHaveCount(0);
+  await expect(other.locator('embedpdf-container')).toHaveCount(0);
 });
 test('保存拒否でもオンライン表示を継続', async ({ page, context }) => {
   await context.addInitScript(() => {
@@ -186,12 +236,13 @@ test('保存拒否でもオンライン表示を継続', async ({ page, context 
   });
   await fixture(page, context);
   await page.goto('/works/24000010');
-  await expect(page.getByRole('button', { name: '次のページ' })).toBeEnabled();
+  await expectPixels(page);
   await expect(
     page.getByText('この端末に保存できませんでした。オンラインでは引き続き閲覧できます。'),
   ).toBeVisible();
-  await page.getByRole('button', { name: '次のページ' }).click();
-  await expect(page.getByText('2 / 2 ページ')).toBeVisible();
+  await page.getByRole('region', { name: 'PDFビューア', exact: true }).hover();
+  await page.mouse.wheel(0, 400);
+  await expectPixels(page);
 });
 test('IndexedDBの期限境界・時計巻戻し・別UID・失効後の遅い保存を拒否', async ({
   page,
@@ -372,12 +423,12 @@ test('一時的な容量エラーは一度だけ再試行し、利用者切替�
   expect(await rows(page)).toHaveLength(1);
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole('button', { name: '次のページ' })).toBeEnabled();
+  await expectPixels(page);
   await page.evaluate(() => {
     localStorage.setItem('offline-fixture-user', 'fixture-bob');
     window.dispatchEvent(new Event('offline-fixture-user'));
   });
-  await expect(page.locator('canvas')).toHaveCount(0);
+  await expect(page.locator('embedpdf-container')).toHaveCount(0);
   expect(await rows(page)).toHaveLength(0);
 });
 
@@ -404,7 +455,7 @@ test('ブラウザを終了し同じプロファイルでオフライン再起�
     await browserContext.setOffline(true);
     page = browserContext.pages()[0] ?? (await browserContext.newPage());
     await page.goto('/works/24000010?kind=poster');
-    await expect(page.getByRole('button', { name: '次のページ' })).toBeEnabled();
+    await expectPixels(page);
     expect((await rows(page))[0]!.expiresAt).toBe(expires);
   } finally {
     await browserContext.close();
@@ -494,8 +545,14 @@ async function pushMessage(page: Page, type: string, data: unknown) {
 }
 async function enableNotifications(page: Page) {
   await page.goto('/notifications');
-  await page.getByRole('button', { name: '通知を受け取る', exact: true }).click();
-  await expect(page.getByText('端末登録：有効', { exact: true })).toBeVisible();
+  await expect(page.getByRole('switch', { name: 'この端末への通知' })).toBeEnabled({
+    timeout: 10000,
+  });
+  await page.getByRole('switch', { name: 'この端末への通知' }).click();
+  await expect(page.getByRole('switch', { name: 'この端末への通知' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
 }
 async function binding(page: Page) {
   return page.evaluate(
@@ -530,7 +587,8 @@ test('通知: 単一SWを指定した登録・前景案内・内容表示と既�
   await expect(page.getByText('新しいお知らせがあります。', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'お知らせを確認', exact: true }).click();
   await expect(page.getByLabel('お知らせの内容')).toContainText('これは通知の試験です。');
-  await expect(page.getByLabel('お知らせ一覧')).toContainText('既読');
+  await page.getByRole('button', { name: 'お知らせ一覧', exact: true }).click();
+  await expect(page.getByLabel('既読', { exact: true })).toHaveCount(1);
 });
 test('通知: 背景では一般文のみ表示・タップ先は自サービスの固定URL', async ({ page, context }) => {
   await notificationFixture(page, context);
@@ -563,11 +621,17 @@ test('通知: 停止・再有効化・ログアウト後に古いPushを表示�
       noticeId: '11111111-1111-4111-8111-111111111111',
       binding: b!.binding,
     };
-  await page.getByRole('button', { name: 'この端末の通知を停止', exact: true }).click();
-  await expect(page.getByText('端末登録：なし', { exact: true })).toBeVisible();
+  await page.getByRole('switch', { name: 'この端末への通知' }).click();
+  await expect(page.getByRole('switch', { name: 'この端末への通知' })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
   expect((await pushMessage(page, 'FIXTURE_PUSH', data)).shown).toHaveLength(0);
-  await page.getByRole('button', { name: '通知を受け取る', exact: true }).click();
-  await expect(page.getByText('端末登録：有効', { exact: true })).toBeVisible();
+  await page.getByRole('switch', { name: 'この端末への通知' }).click();
+  await expect(page.getByRole('switch', { name: 'この端末への通知' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
   expect((await binding(page))!.binding).not.toBe(b!.binding);
   await page.goto('/account');
   await page.getByRole('button', { name: 'ログアウト', exact: true }).click();
@@ -587,8 +651,11 @@ test('通知: 不一致binding・不正通知ID・解除後のクリックを拒
     { type: 'archive-notice', noticeId: '11111111-1111-4111-8111-111111111111', binding: 'wrong' },
   ])
     expect((await pushMessage(page, 'FIXTURE_PUSH', data)).shown).toHaveLength(0);
-  await page.getByRole('button', { name: 'この端末の通知を停止', exact: true }).click();
-  await expect(page.getByText('端末登録：なし', { exact: true })).toBeVisible();
+  await page.getByRole('switch', { name: 'この端末への通知' }).click();
+  await expect(page.getByRole('switch', { name: 'この端末への通知' })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
   expect(
     (
       await pushMessage(page, 'FIXTURE_CLICK', {
@@ -597,4 +664,228 @@ test('通知: 不一致binding・不正通知ID・解除後のクリックを拒
       })
     ).opened,
   ).toHaveLength(0);
+});
+
+test('設定画面: 通知スイッチで端末登録をオン・オフできる', async ({ page, context }, testInfo) => {
+  const f = await notificationFixture(page, context);
+  await page.goto('/account');
+  const toggle = page.getByRole('switch', { name: 'この端末への通知' });
+  await expect(toggle).toBeEnabled();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  expect((await f.calls()).includes('PUT /api/push-subscriptions')).toBe(true);
+  await page.screenshot({
+    path: testInfo.outputPath('settings-notification-on.png'),
+    fullPage: true,
+  });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  expect((await f.calls()).includes('DELETE /api/push-subscriptions')).toBe(true);
+  expect(await binding(page)).toBeNull();
+  await page.reload();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await page.evaluate(() => {
+    Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'denied' });
+    window.dispatchEvent(new Event('focus'));
+  });
+  await expect(toggle).toBeDisabled();
+  await expect(
+    page.getByText('ブラウザ設定で通知が拒否されています。設定から許可すると再登録できます。'),
+  ).toBeVisible();
+});
+
+test('通知設定はお知らせパネルとアカウントで同期する', async ({ page, context }) => {
+  await notificationFixture(page, context);
+  await page.goto('/account');
+  const accountToggle = page
+    .getByRole('region', { name: '表示と通知' })
+    .getByRole('switch', { name: 'この端末への通知' });
+  await expect(accountToggle).toBeEnabled();
+  await accountToggle.click();
+  await expect(accountToggle).toHaveAttribute('aria-checked', 'true');
+  await page.getByRole('button', { name: 'お知らせ', exact: true }).click();
+  const panel = page.getByRole('dialog', { name: 'お知らせ', exact: true });
+  const panelToggle = panel.getByRole('switch', { name: 'この端末への通知' });
+  await expect(panelToggle).toHaveAttribute('aria-checked', 'true');
+  await expect(panelToggle).toBeEnabled();
+  await panelToggle.click();
+  await expect(panelToggle).toHaveAttribute('aria-checked', 'false');
+  await expect(accountToggle).toHaveAttribute('aria-checked', 'false');
+  await panel.getByRole('button', { name: 'お知らせを閉じる' }).click();
+  await expect(accountToggle).toHaveAttribute('aria-checked', 'false');
+});
+
+test('PDF閲覧前の事前保存はSDKだけで、Workerを常駐させず初回表示で再取得しない', async ({
+  page,
+  context,
+}, testInfo) => {
+  await page.addInitScript(() => {
+    const counts = { created: 0, active: 0 };
+    Object.assign(window, { preparationWorkers: counts });
+    const NativeWorker = window.Worker;
+    window.Worker = class extends NativeWorker {
+      constructor(url: string | URL, options?: WorkerOptions) {
+        super(url, options);
+        counts.created++;
+        counts.active++;
+      }
+      override terminate() {
+        counts.active--;
+        super.terminate();
+      }
+    };
+  });
+  const { calls, state } = await fixture(page, context);
+  const manifest = (await (await page.request.get('/pdf-offline-manifest.json')).json()) as {
+    files: { url: string; size: number }[];
+  };
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async (files) => {
+          const cache = await caches.open('tankyu-pdf-assets-v1');
+          return (await Promise.all(files.map((file) => cache.match(file.url)))).every(Boolean);
+        }, manifest.files),
+      { timeout: 30000 },
+    )
+    .toBe(true);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { preparationWorkers: { created: number } }).preparationWorkers
+          .created,
+    ),
+  ).toBe(0);
+  expect(await page.evaluate(() => 'TankyuEmbedPDF' in globalThis)).toBe(false);
+  expect((await calls()).filter((call) => /\/pdf\//.test(call))).toEqual([]);
+  expect(await rows(page)).toHaveLength(0);
+  const before = (await (await page.request.get('/__offline-fixture')).json()).sdkRequests;
+  await state({ blockSdk: true });
+  await page.goto('/works/24000010');
+  await expect
+    .poll(
+      () =>
+        page
+          .getByRole('region', { name: 'PDFビューア', exact: true })
+          .locator('img')
+          .evaluateAll((images) => images.some((el) => (el as HTMLImageElement).naturalWidth > 0)),
+      { timeout: 20000 },
+    )
+    .toBe(true);
+  expect((await (await page.request.get('/__offline-fixture')).json()).sdkRequests).toBe(before);
+  await page.goto('/explore');
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { preparationWorkers: { active: number } }).preparationWorkers
+            .active,
+      ),
+    )
+    .toBe(0);
+  await testInfo.attach('SDKの端末保存容量', {
+    body: JSON.stringify({
+      bytes: manifest.files.reduce((n, f) => n + f.size, 0),
+      workerCountBeforeViewing: 0,
+    }),
+    contentType: 'application/json',
+  });
+});
+
+test('インストール済みアプリはログイン前でも公開SDKだけを事前保存する', async ({
+  page,
+  context,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('fixture-initialized', '1');
+    Object.defineProperty(navigator, 'standalone', { value: true, configurable: true });
+  });
+  const { calls } = await fixture(page, context);
+  const manifest = (await (await page.request.get('/pdf-offline-manifest.json')).json()) as {
+    files: { url: string }[];
+  };
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async (files) => {
+          const cache = await caches.open('tankyu-pdf-assets-v1');
+          return (await Promise.all(files.map((file) => cache.match(file.url)))).every(Boolean);
+        }, manifest.files),
+      { timeout: 30000 },
+    )
+    .toBe(true);
+  expect((await calls()).some((call) => /\/pdf\//.test(call))).toBe(false);
+  expect(await page.evaluate(() => 'TankyuEmbedPDF' in globalThis)).toBe(false);
+});
+
+test('データ節約時はSDKを自動取得しない', async ({ page, context }) => {
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, 'connection', {
+      value: { saveData: true },
+      configurable: true,
+    }),
+  );
+  await fixture(page, context);
+  await page.waitForTimeout(1800);
+  const state = await (await page.request.get('/__offline-fixture')).json();
+  expect(state.sdkRequests ?? 0).toBe(0);
+  expect(await page.evaluate(() => 'TankyuEmbedPDF' in globalThis)).toBe(false);
+});
+
+test('全画面で閲覧中でも期限が切れたらPDFを閉じスクロールとヘッダーを戻す', async ({
+  page,
+  context,
+}) => {
+  await page.addInitScript(() =>
+    Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', {
+      value: undefined,
+      configurable: true,
+    }),
+  );
+  await fixture(page, context);
+  await save(page);
+  const entry = (await rows(page))[0]!;
+  await context.setOffline(true);
+  await page.reload();
+  await expectPixels(page);
+  await page.getByRole('button', { name: '全画面表示', exact: true }).click();
+  await expect(page.locator('[data-reader-fullscreen="true"]')).toBeVisible();
+  await page.clock.install();
+  await page.clock.setSystemTime(entry.expiresAt + 10);
+  await page.clock.fastForward(1200);
+  await expect(page.locator('embedpdf-container')).toHaveCount(0);
+  await expect(page.locator('[data-reader-fullscreen="true"]')).toHaveCount(0);
+  expect(await page.evaluate(() => document.body.style.overflow)).not.toBe('hidden');
+  await expect(page.locator('.site-header')).not.toHaveAttribute('inert');
+});
+
+test('オフラインでも資料切替の確認中にPDFを隠し、全画面を維持して別の保存資料を開く', async ({
+  page,
+  context,
+}) => {
+  await page.addInitScript(() =>
+    Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', {
+      value: undefined,
+      configurable: true,
+    }),
+  );
+  await fixture(page, context);
+  await save(page);
+  await page.goto('/works/24000010?kind=report');
+  await waitSaved(page);
+  await expect.poll(async () => (await rows(page)).length).toBe(2);
+  await context.setOffline(true);
+  await page.reload();
+  await expectPixels(page);
+  await page.getByRole('button', { name: '全画面表示', exact: true }).click();
+  await page.getByRole('button', { name: 'ポスター', exact: true }).click();
+  await expectPixels(page);
+  await expect(page.locator('[data-reader-fullscreen="true"]')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'ポスター', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByRole('button', { name: '全画面表示を解除', exact: true }).click();
+  await expect(page.locator('.site-header')).not.toHaveAttribute('inert');
 });

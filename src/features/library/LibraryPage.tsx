@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react';
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/context';
-import type { LibraryPageDto, StatsDto } from '../../contracts/library.generated';
+import type { LibraryPageDto, HistoryDeletedDto } from '../../contracts/library.generated';
 import { LiveWorkCard } from '../discovery/LiveWorkCard';
 import { libraryMessage, retryableIntent } from './client';
+import { cacheHistoryDelete } from './cache';
 import { visitStreak } from '../offline/store';
 import styles from './LibraryPage.module.css';
 export default function LibraryPage() {
@@ -18,30 +20,27 @@ export default function LibraryPage() {
     [to, setTo] = useState(''),
     [streak, setStreak] = useState<number | null>(null);
   const intent = useRef(retryableIntent());
-  const stats = useQuery({
-    queryKey: ['stats', session?.uid],
-    enabled: !offline,
-    queryFn: async () => {
-      const value = await request<StatsDto>('/api/stats');
-      if (cacheSession)
-        void visitStreak(cacheSession, value.serverTime)
-          .then(setStreak)
-          .catch(() => {});
-      return value;
-    },
-    staleTime: 0,
-  });
   const data = useInfiniteQuery({
     queryKey: ['library', session?.uid, kind],
     enabled: !offline,
     initialPageParam: '',
-    queryFn: ({ pageParam }) =>
+    queryFn: ({ pageParam, signal }) =>
       request<LibraryPageDto>(
         `/api/${kind}${pageParam ? '?cursor=' + encodeURIComponent(pageParam) : ''}`,
+        { signal },
       ),
     getNextPageParam: (page) => page.nextCursor ?? undefined,
-    staleTime: 0,
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
+  const stats = data.data?.pages[0]?.stats;
+  useEffect(() => {
+    if (cacheSession && stats?.serverTime)
+      void visitStreak(cacheSession, stats.serverTime)
+        .then(setStreak)
+        .catch(() => {});
+  }, [cacheSession, stats?.serverTime]);
   async function remove(id?: string) {
     if (busy) return;
     if (
@@ -69,15 +68,11 @@ export default function LibraryPage() {
     setBusy(true);
     setMessage('');
     try {
-      await request(path, {
+      const result = await request<HistoryDeletedDto>(path, {
         method: 'DELETE',
         body: JSON.stringify({ ...body, ...intent.current({ path, body }) }),
       });
-      await Promise.all([
-        query.invalidateQueries({ queryKey: ['library'] }),
-        query.invalidateQueries({ queryKey: ['stats'] }),
-        query.invalidateQueries({ queryKey: ['favorite'] }),
-      ]);
+      await cacheHistoryDelete(query, session!.uid, id, body, result.stats);
       intent.current.clear();
       setMessage('閲覧履歴を削除しました。');
     } catch (error) {
@@ -88,36 +83,37 @@ export default function LibraryPage() {
   }
   return (
     <div className="page-container">
-      <header className={styles.header}>
-        <span className="eyebrow">YOUR COLLECTION</span>
-        <h1>問いの足あと</h1>
-        <p>気になった探究と、これまでの出会いを手元に。</p>
-        <Link to="/saved">この端末に保存した資料 →</Link>
+      <header className="sr-only">
+        <h1 className="sr-only">ライブラリ</h1>
       </header>
       {offline ? (
         <p role="status">
-          履歴とお気に入りはオンラインで確認できます。<Link to="/saved">端末の保存を開く</Link>
+          履歴とお気に入りはオンラインで確認できます。
+          <Link to="/account">保存資料はアカウントから開けます</Link>
         </p>
       ) : (
         <>
           <section className={styles.stats} aria-label="閲覧の記録">
-            {stats.data ? (
-              <>
-                <div>
-                  <b>{stats.data.today}</b>今日
-                </div>
-                <div>
-                  <b>{stats.data.week}</b>直近7日
-                </div>
-                <div>
-                  <b>{stats.data.total}</b>これまで
-                </div>
-              </>
-            ) : (
-              <p>統計を{stats.isError ? '取得できませんでした。' : '確認しています…'}</p>
-            )}
+            {[
+              ['今日', stats?.today],
+              ['直近7日', stats?.week],
+              ['これまで', stats?.total],
+            ].map(([label, count]) => (
+              <div key={label}>
+                <span>{label}</span>
+                <b>
+                  {count ?? '—'}
+                  <small>件</small>
+                </b>
+              </div>
+            ))}
           </section>
-          <p className={styles.note}>
+          {data.isError && (
+            <p className={styles.note} role="status">
+              閲覧数を取得できませんでした。
+            </p>
+          )}
+          <p className="sr-only">
             最後に閲覧した日時による作品数です。同じ作品を何度開いても1作品として数えます（日本時間）。
             {streak !== null && ` この端末でライブラリを連続して開いた日数：${streak}日。`}
           </p>
@@ -141,29 +137,40 @@ export default function LibraryPage() {
           {data.data && (
             <>
               <div className={styles.grid}>
-                {data.data.pages
-                  .flatMap((p) => p.items)
+                {[
+                  ...new Map(
+                    data.data.pages
+                      .flatMap((p) => p.items)
+                      .map((item) => [item.work.documentID, item]),
+                  ).values(),
+                ]
+                  .sort((a, b) =>
+                    kind === 'history'
+                      ? Date.parse(b.viewedAt ?? '') - Date.parse(a.viewedAt ?? '')
+                      : b.work.documentID.localeCompare(a.work.documentID),
+                  )
                   .map((item) => (
-                    <div key={item.work.documentID}>
+                    <div className={styles.entry} key={item.work.documentID}>
                       <LiveWorkCard work={item.work} from="/library" />
-                      {item.viewedAt && (
-                        <p className={styles.note}>
-                          {new Date(item.viewedAt).toLocaleDateString('ja-JP', {
-                            timeZone: 'Asia/Tokyo',
-                          })}
-                          に閲覧
-                        </p>
-                      )}
-                      {kind === 'history' && (
-                        <button
-                          className="button secondary"
-                          disabled={busy}
-                          onClick={() => void remove(item.work.documentID)}
-                          aria-label={`${item.work.title}の履歴を削除`}
-                        >
-                          履歴を削除
-                        </button>
-                      )}
+                      <div className={styles.entryTools}>
+                        {item.viewedAt && (
+                          <time>
+                            {new Date(item.viewedAt).toLocaleDateString('ja-JP', {
+                              timeZone: 'Asia/Tokyo',
+                            })}
+                          </time>
+                        )}
+                        {kind === 'history' && (
+                          <button
+                            className="icon-button"
+                            disabled={busy}
+                            onClick={() => void remove(item.work.documentID)}
+                            aria-label={`${item.work.title}の履歴を削除`}
+                          >
+                            <Trash2 size={17} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
               </div>
@@ -180,7 +187,7 @@ export default function LibraryPage() {
                   disabled={data.isFetchingNextPage}
                   onClick={() => void data.fetchNextPage()}
                 >
-                  続きを見る
+                  さらに表示
                 </button>
               )}
             </>

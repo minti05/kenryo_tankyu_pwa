@@ -15,11 +15,6 @@
 .copy h1 span {
   color: var(--accent);
 }
-.school {
-  font-size: 0.75rem;
-  color: var(--muted);
-  margin: 10px 0;
-}
 .lead {
   font-size: 0.875rem;
   line-height: 2.1;
@@ -122,95 +117,6 @@
   color: var(--muted);
   margin-top: 12px;
 }
-.introduction {
-  border-top: 1px solid var(--line);
-  padding: 54px 0 30px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8%;
-}
-.introduction h2 {
-  font-size: 1.625rem;
-  line-height: 1.7;
-  letter-spacing: -0.03em;
-  margin: 12px 0;
-}
-.introduction > p {
-  font-size: 0.875rem;
-  line-height: 2.2;
-  color: var(--muted);
-}
-.steps {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  padding-bottom: 56px;
-}
-.steps article {
-  padding: 25px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-.steps article > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--accent);
-}
-.steps article > div span {
-  color: var(--muted);
-  font-size: 0.6875rem;
-}
-.steps h3 {
-  font-size: 0.9375rem;
-  margin: 25px 0 12px;
-}
-.steps p {
-  font-size: 0.75rem;
-  color: var(--muted);
-  line-height: 1.9;
-  margin: 0;
-}
-.useAnywhere {
-  border-block: 1px solid var(--line);
-  padding: 32px 0;
-  display: flex;
-  gap: 24px;
-  align-items: center;
-}
-.useAnywhere > svg {
-  flex-shrink: 0;
-  color: var(--accent);
-}
-.useAnywhere h2 {
-  font-size: 1.1875rem;
-  margin: 0 0 10px;
-}
-.useAnywhere p {
-  font-size: 0.75rem;
-  line-height: 1.9;
-  color: var(--muted);
-  margin: 0;
-}
-.useAnywhere > a {
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.security {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 20px 0 5px;
-  color: var(--muted);
-}
-.security svg {
-  flex-shrink: 0;
-}
-.security p {
-  font-size: 0.6875rem;
-  line-height: 1.9;
-}
 .mobileBreak {
   display: none;
 }
@@ -240,15 +146,12 @@
   }
   .hero {
     grid-template-columns: 1fr;
-    padding: 38px 0 36px;
+    padding: 0 0 36px;
     gap: 36px;
   }
   .copy h1 {
     font-size: 2.125rem;
-    margin-top: 18px;
-  }
-  .school {
-    font-size: 0.625rem;
+    margin-top: 0;
   }
   .lead {
     font-size: 0.8125rem;
@@ -265,48 +168,6 @@
   .galleryHeader {
     font-size: 0.5rem;
   }
-  .introduction {
-    grid-template-columns: 1fr;
-    padding-top: 35px;
-    gap: 5px;
-  }
-  .introduction h2 {
-    font-size: 1.4375rem;
-  }
-  .introduction > p {
-    font-size: 0.8125rem;
-  }
-  .steps {
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding-bottom: 35px;
-  }
-  .steps article {
-    padding: 20px;
-  }
-  .steps h3 {
-    margin: 14px 0 8px;
-  }
-  .useAnywhere {
-    flex-wrap: wrap;
-    gap: 18px;
-  }
-  .useAnywhere div {
-    flex: 1;
-    min-width: 220px;
-  }
-  .useAnywhere > a {
-    margin-left: 52px;
-  }
-  .useAnywhere h2 {
-    font-size: 1.0625rem;
-  }
-  .security {
-    align-items: start;
-  }
-  .security svg {
-    margin-top: 13px;
-  }
 }
 @media (prefers-reduced-motion: no-preference) {
   .artTile {
@@ -314,5 +175,53 @@
   }
   .artTile:hover {
     transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .copy > h1,
+  .lead,
+  .login,
+  .galleryHeader,
+  .artTile,
+  .galleryCaption {
+    animation: welcome-reveal 0.65s ease-out both;
+  }
+  .copy > h1 {
+    animation-delay: 0.05s;
+  }
+  .lead {
+    animation-delay: 0.16s;
+  }
+  .login {
+    animation-delay: 0.27s;
+  }
+  .galleryHeader {
+    animation-delay: 0.34s;
+  }
+  .artTile[data-tone='0'] {
+    animation-delay: 0.4s;
+  }
+  .artTile[data-tone='1'] {
+    animation-delay: 0.49s;
+  }
+  .artTile[data-tone='2'] {
+    animation-delay: 0.58s;
+  }
+  .artTile[data-tone='3'] {
+    animation-delay: 0.67s;
+  }
+  .galleryCaption {
+    animation-delay: 0.76s;
+  }
+}
+@keyframes welcome-reveal {
+  from {
+    opacity: 0;
+    translate: 0 -14px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
   }
 }

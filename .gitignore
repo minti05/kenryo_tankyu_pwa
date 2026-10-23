@@ -16,3 +16,8 @@ test-results-offline/
 
 # Local credentials; never commit
 /secrets/
+
+/public/embedpdf/
+
+test-results-library/
+test-results-discovery/

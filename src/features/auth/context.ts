@@ -3,6 +3,7 @@ import type { CacheSession } from '../offline/store';
 import type { SessionDto } from '../../contracts/session.generated';
 export type Session = SessionDto;
 export interface AuthState {
+  profile?: { displayName: string | null; photoURL: string | null } | null;
   offline: boolean;
   cacheSession: CacheSession | null;
   requestResponse: (path: string, options?: RequestInit) => Promise<Response>;

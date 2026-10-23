@@ -1,0 +1,36 @@
+.category-art-pair {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+}
+.category-art-pair > picture {
+  position: absolute;
+  width: 46%;
+  height: 46%;
+}
+.category-art-pair > picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.category-art-first {
+  top: 0;
+  left: 0;
+}
+.category-art-second {
+  bottom: 0;
+  right: 0;
+}
+.category-art-pair::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent calc(50% - 0.5px),
+    currentColor 50%,
+    transparent calc(50% + 0.5px)
+  );
+  opacity: 0.4;
+  pointer-events: none;
+}

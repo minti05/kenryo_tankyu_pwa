@@ -16,6 +16,18 @@ for (const width of [360, 820, 1280])
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
+    await expect(page.getByText('探究アーカイブ制作委員会', { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'プライバシーポリシー', exact: true }),
+    ).toHaveAttribute('href', 'https://sites.google.com/view/tankyu-privacy-policy');
+    await expect(page.getByRole('link', { name: '利用規約', exact: true })).toHaveAttribute(
+      'href',
+      'https://sites.google.com/view/tankyu-terms-of-service',
+    );
+    await expect(page.getByRole('link', { name: 'お問い合わせ', exact: true })).toHaveAttribute(
+      'href',
+      'mailto:goto.aoi.516@gmail.com',
+    );
     await page.screenshot({ path: testInfo.outputPath(`welcome-${width}.png`), fullPage: true });
     await page.getByRole('link', { name: 'サンプル作品で画面を試す' }).click();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('好奇心の、その先へ。');

@@ -1,13 +1,5 @@
-import { Link, useSearchParams } from 'react-router-dom';
-import {
-  ArrowRight,
-  BookOpen,
-  Compass,
-  Bookmark,
-  MonitorSmartphone,
-  ShieldCheck,
-  ArrowUpRight,
-} from 'lucide-react';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
+import { ArrowUpRight } from 'lucide-react';
 import { CategoryArt } from '../components/CategoryArt';
 import { PREVIEW_ENABLED } from '../lib/environment';
 import styles from './WelcomePage.module.css';
@@ -25,17 +17,18 @@ export default function WelcomePage() {
     next =
       requested &&
       requested.length < 2000 &&
-      /^\/(works\/\d{8}|explore|awards|saved|library|notifications)(\?|$)/.test(requested)
+      /^\/(works\/\d{8}|home|search|results|explore(?:\/[a-z]+)?|awards|saved|library|notifications|account)(\?|$)/.test(
+        requested,
+      )
         ? requested
         : import.meta.env.VITE_NOTIFICATION_ACCEPTANCE === 'true'
           ? '/notifications'
-          : '/account';
+          : '/home';
+  if (ready && session) return <Navigate to={next} replace />;
   return (
     <div className="page-container">
       <section className={styles.hero}>
         <div className={styles.copy}>
-          <span className="eyebrow">MATSUMOTO KENRYO HIGH SCHOOL</span>
-          <p className={styles.school}>松本県ケ丘高校生徒のための探究アーカイブ</p>
           {deletionReceipt && (
             <p role="status">
               退会手続きを受け付けました。運営側で削除処理を完了します。受付番号：{deletionReceipt}
@@ -50,7 +43,7 @@ export default function WelcomePage() {
           <p className={styles.lead}>
             まちの小さな疑問も、世界を変えるアイデアも。
             <br />
-            積み重ねてきた探究を、次の好奇心につなぐ場所。
+            松本県ヶ丘高校の生徒と教員のみが使用できます。
           </p>
           <div className={styles.login}>
             <button
@@ -73,11 +66,6 @@ export default function WelcomePage() {
               <span>@kenryo.ed.jp のアカウントと利用資格が必要です。</span>
             </p>
             {error && <p role="alert">{error}</p>}
-            {session && (
-              <Link className="button secondary" to={next}>
-                {next === '/account' ? 'アカウントを確認' : '続きのページを開く'}
-              </Link>
-            )}
             {signedIn && !session && !busy && (
               <button
                 className="button secondary"
@@ -134,71 +122,6 @@ export default function WelcomePage() {
           <p className={styles.galleryCaption}>きっと、気になる問いが見つかる。</p>
         </div>
       </section>
-      <section className={styles.introduction}>
-        <div>
-          <span className="eyebrow">YOUR NEXT QUESTION</span>
-          <h2>
-            探究のはじまりに、
-            <br />
-            新しい視点を。
-          </h2>
-        </div>
-        <p>
-          このアーカイブには、県ケ丘の生徒が取り組んだ探究の成果を集めます。先輩がどんな疑問を持ち、どう調べ、何を見つけたのか。作品との出会いを、自分のテーマを考えるきっかけに。
-        </p>
-      </section>
-      <section className={styles.steps} aria-label="アーカイブでできること">
-        {[
-          {
-            icon: Compass,
-            n: '01',
-            title: '気になるテーマを探す',
-            text: '14のカテゴリやキーワードから、興味のある問いへ。',
-          },
-          {
-            icon: BookOpen,
-            n: '02',
-            title: '探究の過程を読む',
-            text: 'ポスター・論文・スライド・レポートから、考え方や工夫に触れる。',
-          },
-          {
-            icon: Bookmark,
-            n: '03',
-            title: '自分の探究につなげる',
-            text: '出典と著作者を大切にしながら、次の問いを見つける。',
-          },
-        ].map((item) => (
-          <article key={item.n}>
-            <div>
-              <item.icon size={23} />
-              <span>{item.n}</span>
-            </div>
-            <h3>{item.title}</h3>
-            <p>{item.text}</p>
-          </article>
-        ))}
-      </section>
-      <section className={styles.useAnywhere}>
-        <MonitorSmartphone size={34} />
-        <div>
-          <h2>いつもの端末から、すぐに。</h2>
-          <p>
-            スマートフォン、iPad、パソコンのブラウザに対応します。
-            <br />
-            アプリストアからのインストールは不要。ホーム画面への追加も選べます。
-          </p>
-        </div>
-        <Link to="/about" className="text-link">
-          利用方法を見る
-          <ArrowRight size={17} />
-        </Link>
-      </section>
-      <div className={styles.security}>
-        <ShieldCheck size={18} />
-        <p>
-          作品は学校のアカウントでログインした人に提供する設計です。共有端末では、使い終わったらログアウトしましょう。
-        </p>
-      </div>
     </div>
   );
 }

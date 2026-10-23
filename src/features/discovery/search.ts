@@ -1,5 +1,13 @@
 import { CATEGORY_CATALOG } from '../../contracts/catalog.generated';
 import type { WorkDto, DocumentType } from '../../contracts/work.generated';
+export const DOCUMENT_ORDER = ['poster', 'slide', 'report', 'thesis'] as const;
+export function orderDocuments<T extends { kind: string }>(documents: readonly T[]): T[] {
+  return [...documents].sort(
+    (a, b) =>
+      DOCUMENT_ORDER.indexOf(a.kind as DocumentType) -
+      DOCUMENT_ORDER.indexOf(b.kind as DocumentType),
+  );
+}
 export const DOCUMENT_LABELS: Record<DocumentType, string> = {
   slide: 'スライド',
   report: 'レポート',
@@ -11,7 +19,7 @@ export const categoryLabel = (id: string) =>
 export function documentTypes(
   work: Pick<WorkDto, 'existsPoster' | 'existsReport' | 'existsThesis' | 'existsSlide'>,
 ): DocumentType[] {
-  return (['poster', 'report', 'thesis', 'slide'] as const).filter(
+  return DOCUMENT_ORDER.filter(
     (kind) =>
       ({
         poster: work.existsPoster,

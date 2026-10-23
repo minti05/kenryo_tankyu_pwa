@@ -1,182 +1,248 @@
-import { useEffect, useRef, useState } from 'react';
-import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
+import { useEffect, useRef, useState, useContext } from 'react';
+import type {
+  EmbedPdfContainer,
+  DocumentManagerPlugin,
+  TilingPlugin,
+  PDFViewerConfig,
+  ZoomMode,
+  UIPlugin,
+} from '@embedpdf/react-pdf-viewer';
+import { ReaderContext } from './reader-context';
+import { useTheme } from '../../lib/theme';
 import styles from './WorkPage.module.css';
-export default function PdfViewer({ blob, onReady }: { blob: Blob; onReady: () => void }) {
-  const [doc, setDoc] = useState<PDFDocumentProxy | null>(null),
-    [page, setPage] = useState(1),
-    [zoom, setZoom] = useState(1),
-    [error, setError] = useState(''),
-    [rendering, setRendering] = useState(true),
-    [text, setText] = useState(''),
-    [width, setWidth] = useState(600);
-  const canvas = useRef<HTMLCanvasElement>(null),
-    container = useRef<HTMLDivElement>(null),
-    ready = useRef(onReady);
+
+const ROOT = new URL('/embedpdf/2.15.1', location.origin).href;
+type Documents = ReturnType<DocumentManagerPlugin['provides']>;
+type UI = ReturnType<UIPlugin['provides']>;
+interface Runtime {
+  documents: Documents;
+  ui: UI;
+  loaded: Map<Blob, { id: string; promise: Promise<void> }>;
+  painted: Set<string>;
+  nextId: number;
+}
+export default function PdfViewer({
+  blob,
+  onReady,
+  visible = true,
+}: {
+  blob: Blob;
+  onReady: () => void;
+  visible?: boolean;
+}) {
+  const host = useRef<HTMLDivElement>(null);
+  const viewer = useRef<EmbedPdfContainer | null>(null);
+  const runtime = useRef<Promise<Runtime> | null>(null);
+  const ready = useRef(onReady);
+  const active = useRef<Blob | null>(null);
+  const notify = useRef<(() => void) | null>(null);
+  const [error, setError] = useState('');
+  const { theme } = useTheme();
+  const bindSearch = useContext(ReaderContext)?.bindSearch;
   useEffect(() => {
     ready.current = onReady;
   }, [onReady]);
   useEffect(() => {
+    viewer.current?.setTheme(theme);
+  }, [theme]);
+  // One worker/engine for the current work. Changing documents does not recreate it.
+  useEffect(() => {
     let closed = false;
-    let task: Awaited<ReturnType<(typeof import('./pdf-runtime'))['loadPdf']>> | undefined;
-    const timer = setTimeout(() => {
+    let instance: EmbedPdfContainer | undefined;
+    const cleanups: (() => void)[] = [];
+    runtime.current = (async () => {
+      const { loadViewer } = await import('./pdf-runtime');
+      const EmbedPDF = await loadViewer();
+      if (closed || !host.current) throw new Error('viewer_closed');
+      const config: PDFViewerConfig = {
+        worker: true,
+        wasmUrl: `${ROOT}/pdfium.wasm`,
+        tabBar: 'never',
+        theme: {
+          preference: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
+        },
+        i18n: { defaultLocale: 'ja', fallbackLocale: 'en' },
+        fonts: { ui: null, signature: null },
+        stamp: { libraries: [], manifests: [], defaultLibrary: false },
+        fontFallback: {
+          fonts: {
+            128: [
+              { url: `${ROOT}/fonts/NotoSansJP-Regular.otf`, weight: 400 },
+              { url: `${ROOT}/fonts/NotoSansJP-Bold.otf`, weight: 700 },
+            ],
+          },
+          defaultFont: [
+            { url: `${ROOT}/fonts/NotoSans-Regular.ttf`, weight: 400 },
+            { url: `${ROOT}/fonts/NotoSans-Bold.ttf`, weight: 700 },
+            { url: `${ROOT}/fonts/NotoSans-Italic.ttf`, weight: 400, italic: true },
+            { url: `${ROOT}/fonts/NotoSans-BoldItalic.ttf`, weight: 700, italic: true },
+          ],
+        },
+        disabledCategories: [
+          'annotation',
+          'form',
+          'redaction',
+          'insert',
+          'history',
+          'capture',
+          'security',
+          'document-open',
+          'document-close',
+          'document-print',
+          'document-export',
+          'document-capture',
+          'document-protect',
+          'panel-comment',
+          'attachment',
+        ],
+        permissions: {
+          overrides: {
+            print: false,
+            printHighQuality: false,
+            modifyContents: false,
+            modifyAnnotations: false,
+            fillForms: false,
+            assembleDocument: false,
+          },
+        },
+        documentManager: { maxDocuments: 4 },
+        zoom: { defaultZoomLevel: 'fit-width' as ZoomMode, minZoom: 0.25, maxZoom: 4 },
+      };
+
+      instance = EmbedPDF.init({ type: 'container', target: host.current, ...config });
+      if (!instance) throw new Error('viewer_init');
+      viewer.current = instance;
+      const registry = await instance.registry;
+      if (closed) throw new Error('viewer_closed');
+      const ui = registry.getPlugin<UIPlugin>('ui')!.provides();
+      const schema = ui.getSchema();
+      ui.mergeSchema({
+        toolbars: Object.fromEntries(
+          Object.entries(schema.toolbars).map(([id, toolbar]) => [
+            id,
+            { ...toolbar, permanent: false },
+          ]),
+        ),
+        overlays: Object.fromEntries(
+          Object.entries(schema.overlays ?? {}).map(([id, overlay]) => [
+            id,
+            { ...overlay, defaultEnabled: false },
+          ]),
+        ),
+      });
+      const documents = registry.getPlugin<DocumentManagerPlugin>('document-manager')!.provides();
+      const state: Runtime = { documents, ui, loaded: new Map(), painted: new Set(), nextId: 0 };
+      const tiling = registry.getPlugin<TilingPlugin>('tiling')!.provides();
+      cleanups.push(
+        tiling.onTileRendering(({ documentId, tiles }) => {
+          if (Object.values(tiles).some((page) => page.some((tile) => tile.status === 'ready'))) {
+            state.painted.add(documentId);
+            notify.current?.();
+          }
+        }),
+      );
+      cleanups.push(
+        documents.onDocumentError(() => {
+          if (!closed) {
+            bindSearch?.(null);
+            setError('PDFを表示できませんでした。資料をダウンロードして確認することもできます。');
+          }
+        }),
+      );
+      return state;
+    })();
+    // The selection effect handles initialization errors; always attach a rejection handler.
+    void runtime.current.catch(() => {});
+    return () => {
+      closed = true;
+      cleanups.forEach((unsubscribe) => unsubscribe());
+      bindSearch?.(null);
+      instance?.remove();
+      viewer.current = null;
+      runtime.current = null;
+    };
+  }, [bindSearch]);
+  useEffect(() => {
+    if (!visible) {
+      bindSearch?.(null);
+      return;
+    }
+    let closed = false;
+    let notified = false;
+    active.current = blob;
+    const fail = () => {
       if (!closed) {
-        setError('表示に時間がかかっています。資料をダウンロードして確認することもできます。');
-        void task?.destroy();
+        bindSearch?.(null);
+        setError('PDFを表示できませんでした。資料をダウンロードして確認することもできます。');
       }
-    }, 20_000);
+    };
+    const timer = setTimeout(fail, 30_000);
     void (async () => {
       try {
-        const { loadPdf } = await import('./pdf-runtime');
-        if (closed) return;
-        task = await loadPdf(new Uint8Array(await blob.arrayBuffer()));
-        if (closed) {
-          await task.destroy();
-          return;
+        const state = await runtime.current;
+        if (!state || closed) return;
+        let entry = state.loaded.get(blob);
+        if (!entry) {
+          if (state.loaded.size >= 4) throw new Error('document_limit');
+          const id = `work-${state.nextId++}`;
+          const promise = (async () => {
+            const buffer = await blob.arrayBuffer();
+            if (closed) throw new Error('selection_closed');
+            const opened = await state.documents
+              .openDocumentBuffer({
+                buffer,
+                name: '探究資料.pdf',
+                documentId: id,
+                autoActivate: false,
+              })
+              .toPromise();
+            const doc = await opened.task.toPromise();
+            if (!doc.pages.length || doc.pages.length > 1000) throw new Error('invalid_document');
+          })();
+          entry = { id, promise };
+          state.loaded.set(blob, entry);
+          void promise.catch(() => {
+            state.loaded.delete(blob);
+          });
         }
-        const pdf = await task.promise;
-        if (pdf.numPages > 1000) throw new Error('too_many_pages');
-        if (!closed) {
-          setDoc(pdf);
+        await entry.promise;
+        if (closed || active.current !== blob) return;
+        const id = entry.id;
+        notify.current = () => {
+          if (closed || notified || !state.painted.has(id)) return;
+          notified = true;
           clearTimeout(timer);
-        }
-      } catch (e) {
-        if (!closed) {
-          clearTimeout(timer);
-          setError(
-            e && typeof e === 'object' && 'name' in e && e.name === 'PasswordException'
-              ? 'パスワード付きの資料は表示できません。運営者へ確認してください。'
-              : 'PDFを表示できませんでした。資料の形式を運営者へ確認してください。',
-          );
-        }
+          ready.current();
+        };
+        state.documents.setActiveDocument(id);
+        bindSearch?.({
+          toggle: () => state.ui.forDocument(id).toggleSidebar('right', 'main', 'search-panel'),
+        });
+        setError('');
+        notify.current();
+      } catch {
+        fail();
       }
     })();
     return () => {
       closed = true;
       clearTimeout(timer);
-      void task?.destroy();
+      notify.current = null;
+      bindSearch?.(null);
     };
-  }, [blob]);
-  useEffect(() => {
-    const el = container.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) =>
-      setWidth(Math.max(200, Math.floor(entries[0]!.contentRect.width))),
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  useEffect(() => {
-    if (!doc || !canvas.current) return;
-    let cancelled = false,
-      task: RenderTask | undefined;
-    const element = canvas.current;
-    const timer = setTimeout(() => {
-      if (!cancelled) {
-        task?.cancel();
-        setError('ページの表示に時間がかかっています。資料をダウンロードして確認してください。');
-      }
-    }, 20_000);
-    void (async () => {
-      setRendering(true);
-      setText('');
-      try {
-        const p = await doc.getPage(page);
-        if (cancelled) return;
-        const original = p.getViewport({ scale: 1 }),
-          cssScale = Math.max(0.1, (width - 24) / original.width) * zoom,
-          desired = cssScale * Math.min(devicePixelRatio || 1, 2),
-          scale = Math.min(
-            desired,
-            Math.sqrt(4_000_000 / (original.width * original.height)),
-            4096 / Math.max(original.width, original.height),
-          );
-        const v = p.getViewport({ scale });
-        element.width = Math.max(1, Math.floor(v.width));
-        element.height = Math.max(1, Math.floor(v.height));
-        element.style.width = `${original.width * cssScale}px`;
-        element.style.height = `${original.height * cssScale}px`;
-        task = p.render({ canvas: element, viewport: v });
-        await task.promise;
-        if (cancelled) return;
-        clearTimeout(timer);
-        setRendering(false);
-        ready.current();
-        const content = await p.getTextContent();
-        if (!cancelled)
-          setText(
-            content.items
-              .map((i) => ('str' in i ? i.str : ''))
-              .join(' ')
-              .slice(0, 50_000),
-          );
-      } catch (e) {
-        if (
-          !cancelled &&
-          !(e && typeof e === 'object' && 'name' in e && e.name === 'RenderingCancelledException')
-        )
-          setError('このページを表示できませんでした。資料をダウンロードして確認してください。');
-      }
-    })();
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-      task?.cancel();
-      element.width = 0;
-      element.height = 0;
-    };
-  }, [doc, page, zoom, width]);
-  if (error)
-    return (
-      <div role="alert" className="empty-state">
-        <p>{error}</p>
-      </div>
-    );
+  }, [blob, bindSearch, visible]);
   return (
     <section aria-label="PDFビューア">
-      <div className={styles.toolbar}>
-        <button disabled={!doc || page <= 1 || rendering} onClick={() => setPage((p) => p - 1)}>
-          前のページ
-        </button>
-        <span role="status">
-          {doc ? `${page} / ${doc.numPages} ページ` : 'PDFを読み込んでいます…'}
-        </span>
-        <button
-          disabled={!doc || page >= doc.numPages || rendering}
-          onClick={() => setPage((p) => p + 1)}
-        >
-          次のページ
-        </button>
-        <label>
-          拡大率
-          <select
-            aria-label="拡大率"
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
-          >
-            {[0.75, 1, 1.5, 2, 3].map((n) => (
-              <option key={n} value={n}>
-                {n === 1 ? '幅に合わせる' : `${n * 100}%`}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      {error && (
+        <div role="alert" className="empty-state">
+          <p>{error}</p>
+        </div>
+      )}
       <div
-        ref={container}
-        className={styles.viewport}
-        role="region"
-        aria-label="PDF表示。拡大後は縦横にスクロールできます"
-        tabIndex={0}
-      >
-        <canvas ref={canvas} aria-label={`PDF ${page}ページ目`} />
-      </div>
-      {rendering && <p role="status">ページを描画しています…</p>}
-      <details>
-        <summary>このページの文字を読む</summary>
-        <p className={styles.pageText}>
-          {text || '文字情報のないページ、または読み込み中です。画像として内容を確認してください。'}
-        </p>
-      </details>
+        ref={host}
+        className={styles.embedViewer}
+        style={error ? { display: 'none' } : undefined}
+      />
     </section>
   );
 }

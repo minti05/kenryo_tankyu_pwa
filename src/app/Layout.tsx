@@ -1,68 +1,115 @@
 import { NotificationBridge } from '../features/notifications/NotificationBridge';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Compass, LibraryBig, Info, ArrowUpRight } from 'lucide-react';
+import { Compass, LibraryBig, Home, Search, ArrowUpRight, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../features/auth/context';
+import { NotificationMenu } from '../features/notifications/NotificationMenu';
+import { ResultsHeader } from '../features/discovery/ResultsHeader';
+import { useDesktopReader } from '../features/works/reader-layout';
+import { WorkHeaderTarget } from '../features/works/header-context';
+import { DesktopSearch } from '../features/discovery/DesktopSearch';
+import { AccountAvatar } from '../features/auth/AccountAvatar';
 import { Brand } from '../components/Brand';
+import { PolicyLinks } from '../components/PolicyLinks';
+import { PdfPreparation } from '../components/PdfPreparation';
 import { PwaNotice } from '../components/PwaNotice';
 export function Layout() {
-  const { session, offline } = useAuth();
-  const location = useLocation(),
+  const { session, offline } = useAuth(),
+    location = useLocation(),
     main = useRef<HTMLElement>(null),
-    previous = useRef(location.pathname),
-    preview = location.pathname.startsWith('/preview');
+    previous = useRef(location.pathname);
+  const preview = location.pathname.startsWith('/preview'),
+    appNavigation = !!session && !preview;
+  const desktopReader = useDesktopReader();
+  const [headerTarget, setHeaderTarget] = useState<HTMLDivElement | null>(null);
+  const results = ['/results', '/awards'].includes(location.pathname),
+    work = location.pathname.startsWith('/works/'),
+    from = new URLSearchParams(location.search).get('from'),
+    category = new URLSearchParams(location.search).get('category'),
+    categoryBack = results && category && !new URLSearchParams(location.search).get('q'),
+    back =
+      work && from && /^\/(home|search|results|explore|awards|library|saved)(\?|$)/.test(from)
+        ? from
+        : work
+          ? offline
+            ? '/saved'
+            : '/explore'
+          : categoryBack
+            ? `/explore/${encodeURIComponent(category!)}`
+            : '/search';
   useEffect(() => {
     if (previous.current === location.pathname) return;
     previous.current = location.pathname;
-    main.current?.focus();
+    if (
+      !main.current?.contains(document.activeElement) &&
+      !document.activeElement?.closest('dialog, [role="dialog"]')
+    )
+      main.current?.focus();
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [location.pathname]);
   return (
-    <div className={preview ? 'app-shell is-preview' : 'app-shell'}>
+    <div
+      className={
+        (preview ? 'app-shell is-preview' : appNavigation ? 'app-shell signed-in' : 'app-shell') +
+        (appNavigation && work ? ' work-focused' : '') +
+        (appNavigation && (results || work) ? ' contextual-page' : '')
+      }
+    >
       <a className="skip-link" href="#main">
         本文へ移動
       </a>
       <header className="site-header">
         <div className="header-inner">
-          <Brand />
-          <nav
-            aria-label="メインナビゲーション"
-            className={preview || session ? 'primary-nav' : 'primary-nav public-nav'}
-          >
-            {preview && (
-              <>
-                <NavLink to="/preview/explore">
-                  <Compass size={18} />
-                  見つける
-                </NavLink>
-                <NavLink to="/preview/library">
-                  <LibraryBig size={18} />
-                  ライブラリ
-                </NavLink>
-              </>
-            )}
-            {!preview && session && (
-              <>
-                <NavLink to="/explore">
-                  <Compass size={18} />
-                  見つける
-                </NavLink>
-                <NavLink to="/awards">KRGP</NavLink>
-                <NavLink to="/library">ライブラリ</NavLink>
-                <NavLink to="/notifications">お知らせ</NavLink>
-                <NavLink to="/account">アカウント</NavLink>
-              </>
-            )}
-            <NavLink to="/about">
-              <Info size={18} />
-              ご案内
-            </NavLink>
-          </nav>
-          <span className="school-mark">
-            松本県ケ丘高校
-            <br />
-            <b>探究を、つなぐ。</b>
-          </span>
+          <div className="header-brand">
+            <Brand to={session ? '/home' : '/welcome'} />
+          </div>
+          {appNavigation && (results || work) ? (
+            <div className="contextual-header">
+              <Link
+                className="icon-button"
+                to={back}
+                aria-label={
+                  work ? '一覧へ戻る' : categoryBack ? 'サブカテゴリに戻る' : '検索に戻る'
+                }
+              >
+                <ArrowLeft size={23} />
+              </Link>
+              {work && desktopReader ? (
+                <ResultsHeader source={back} />
+              ) : work ? (
+                <div className="work-toolbar-target" ref={setHeaderTarget} />
+              ) : (
+                <ResultsHeader />
+              )}
+            </div>
+          ) : appNavigation ? (
+            <>
+              {location.pathname !== '/search' && <DesktopSearch />}
+              <div className="header-actions">
+                <NotificationMenu />
+                <Link
+                  className="icon-button mobile-search"
+                  to="/search"
+                  aria-label="検索画面を開く"
+                >
+                  <Search size={23} />
+                </Link>
+                <Link
+                  className="icon-button desktop-account"
+                  to="/account"
+                  aria-label="アカウント設定"
+                >
+                  <AccountAvatar />
+                </Link>
+              </div>
+            </>
+          ) : (
+            <span className="school-mark">
+              松本県ケ丘高校
+              <br />
+              <b>探究アーカイブ制作委員会</b>
+            </span>
+          )}
         </div>
       </header>
       {import.meta.env.VITE_NOTIFICATION_ACCEPTANCE === 'true' && (
@@ -89,18 +136,51 @@ export function Layout() {
         </aside>
       )}
       <main id="main" tabIndex={-1} ref={main}>
-        <Outlet />
+        <WorkHeaderTarget.Provider value={headerTarget}>
+          <Outlet />
+        </WorkHeaderTarget.Provider>
       </main>
-      <footer className="site-footer">
-        <span>探究アーカイブ</span>
-        <p>ひとつの問いを、次の一歩へ。</p>
-        <div>
-          <Link to="/about#privacy">プライバシー</Link>
-          <Link to="/about#terms">利用について</Link>
-        </div>
-        <small>長野県松本県ケ丘高等学校 生徒向け</small>
-      </footer>
+      {work && appNavigation ? null : appNavigation || preview ? (
+        <nav className="app-nav" aria-label="メインナビゲーション">
+          <NavLink to={preview ? '/welcome' : '/home'}>
+            <Home size={23} />
+            <span>ホーム</span>
+          </NavLink>
+          <NavLink
+            to={preview ? '/preview/explore' : '/explore'}
+            className={({ isActive }) =>
+              isActive || ['/search', '/results', '/awards'].includes(location.pathname)
+                ? 'active'
+                : ''
+            }
+          >
+            <Compass size={23} />
+            <span>探索</span>
+          </NavLink>
+          <NavLink to={preview ? '/preview/library' : '/library'}>
+            <LibraryBig size={23} />
+            <span>ライブラリ</span>
+          </NavLink>
+          {appNavigation && (
+            <NavLink
+              className={({ isActive }) =>
+                `mobile-account ${isActive || location.pathname === '/saved' ? 'active' : ''}`
+              }
+              to="/account"
+              aria-label="アカウント設定"
+            >
+              <AccountAvatar />
+              <span>アカウント</span>
+            </NavLink>
+          )}
+        </nav>
+      ) : (
+        <footer className="public-footer">
+          <PolicyLinks />
+        </footer>
+      )}
       <PwaNotice />
+      <PdfPreparation />
       <NotificationBridge />
     </div>
   );

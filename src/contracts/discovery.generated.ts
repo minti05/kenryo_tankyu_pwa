@@ -1,5 +1,8 @@
 // Generated public contract. Update through its owner; do not edit by hand.
 export interface SearchWorkDto {
+  favoriteCount?: number;
+  isFavorite?: boolean;
+  favoriteRevision?: number;
   documentID: string;
   title: string;
   author: string;

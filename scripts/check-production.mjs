@@ -28,7 +28,7 @@ if (/FIXTURE_PUSH|fixture-push-token/.test(sw))
   throw new Error('Notification fixture leaked into production SW');
 if (
   [...sw.matchAll(/url:["']([^"']+)["']/g)].some((m) =>
-    /pdf-runtime-|pdf\.worker|pdfjs\//.test(m[1]),
+    /pdf-runtime-|pdf\.worker|pdfjs\/|embedpdf\//.test(m[1]),
   )
 )
   throw new Error('Heavy PDF engine must not be precached on Welcome');

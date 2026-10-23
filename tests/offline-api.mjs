@@ -28,7 +28,12 @@ export function offlineApi() {
     configurePreviewServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const path = req.url?.split('?')[0];
-        if (!path?.startsWith('/api/') && path !== '/__offline-fixture') return next();
+        if (
+          !path?.startsWith('/api/') &&
+          path !== '/__offline-fixture' &&
+          !path?.startsWith('/embedpdf/')
+        )
+          return next();
         const cookie = /offline-test=([^;]+)/.exec(req.headers.cookie ?? '')?.[1] ?? 'none';
         let state = states.get(cookie);
         if (!state) {
@@ -41,11 +46,17 @@ export function offlineApi() {
           res.setHeader('Cache-Control', 'no-store');
           res.end(JSON.stringify(body));
         }
+        if (path.startsWith('/embedpdf/')) {
+          state.sdkRequests = (state.sdkRequests ?? 0) + 1;
+          if (state.blockSdk) return json({ error: 'sdk_blocked_for_test' }, 503);
+          return next();
+        }
         if (path === '/__offline-fixture') {
           if (req.method === 'POST') {
             let text = '';
             for await (const chunk of req) text += chunk;
             const value = JSON.parse(text);
+            if (typeof value.blockSdk === 'boolean') state.blockSdk = value.blockSdk;
             if (value.status) state.status = value.status;
             if (value.deleteResponseFail) state.deleteResponseFail = true;
             if (value.rev) state.rev = value.rev;

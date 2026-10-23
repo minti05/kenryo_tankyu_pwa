@@ -66,7 +66,9 @@ export default function SavedPage() {
   }
   return (
     <div className="page-container reading-page">
-      <span className="eyebrow">ON THIS DEVICE</span>
+      <Link className="text-link" to="/account">
+        ← アカウントに戻る
+      </Link>
       <h1>端末に保存した資料</h1>
       <p>
         {offline
@@ -88,7 +90,7 @@ export default function SavedPage() {
         <ul className="saved-list">
           {rows.map((row) => (
             <li key={row.key}>
-              <Link to={`/works/${row.id}?kind=${row.kind}`}>
+              <Link to={`/works/${row.id}?kind=${row.kind}&from=%2Fsaved`}>
                 {row.work.title} · {DOCUMENT_LABELS[row.kind as keyof typeof DOCUMENT_LABELS]}
               </Link>
               <p>

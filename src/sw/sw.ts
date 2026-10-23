@@ -31,7 +31,7 @@ registerRoute(
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'PREPARE_PDF_ASSETS')
     event.waitUntil(
-      prepareAssets()
+      prepareAssets({ background: event.data.background === true })
         .then(() => event.ports[0]?.postMessage({ ok: true }))
         .catch(() => event.ports[0]?.postMessage({ ok: false })),
     );

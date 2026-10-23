@@ -14,6 +14,7 @@ export default tseslint.config(
       'test-results-pdf/**',
       'test-results-offline/**',
       'public/pdfjs/**',
+      'public/embedpdf/**',
       'src/contracts/*.generated.ts',
     ],
   },

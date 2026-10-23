@@ -161,3 +161,69 @@
     box-shadow: 0 8px 22px rgb(35 20 15 / 0.055);
   }
 }
+
+@media (max-width: 767px) {
+  .card {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 14px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+  }
+  .cover {
+    min-height: 88px;
+    height: 88px;
+    padding: 10px;
+    border-radius: 10px;
+  }
+  .coverTitle,
+  .coverBottom,
+  .category {
+    display: none;
+  }
+  .art {
+    width: 70px;
+    height: 70px;
+    top: 8px;
+    right: 12px;
+    transform: none;
+    opacity: 0.6;
+  }
+  .info {
+    min-width: 0;
+    padding: 0;
+  }
+  .info h3 {
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    margin: 7px 0 5px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .meta {
+    font-size: 0.625rem;
+    gap: 6px;
+  }
+  .meta > span:last-child {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .bottom {
+    font-size: 0.6875rem;
+  }
+  .bottom > span:first-child {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+}
+
+.cover[data-category='other'] {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--line);
+}

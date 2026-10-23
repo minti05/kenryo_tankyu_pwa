@@ -1,3 +1,4 @@
+import { FavoriteButton } from '../library/FavoriteButton';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
 import type { SearchWorkDto } from '../../contracts/discovery.generated';
@@ -14,8 +15,17 @@ export function LiveWorkCard({ work, from }: { work: SearchWorkDto; from: string
         data-category={work.category1}
         aria-label={`${work.title}の詳細`}
       >
-        <span className={styles.category}>{categoryLabel(work.category1)}</span>
-        <CategoryArt category={work.category1} className={styles.art} />
+        <span className={styles.category}>
+          {[work.category1, work.category2]
+            .filter((c) => c !== 'none')
+            .map((c) => categoryLabel(c))
+            .join(' / ')}
+        </span>
+        <CategoryArt
+          secondaryCategory={work.category2}
+          category={work.category1}
+          className={styles.art}
+        />
         <span className={styles.coverTitle}>{work.title}</span>
         <span className={styles.coverBottom}>
           KENRYO INQUIRY
@@ -37,6 +47,7 @@ export function LiveWorkCard({ work, from }: { work: SearchWorkDto; from: string
         <div className={styles.bottom}>
           <span>{work.author}</span>
           {work.awardType && <span>KRGP受賞</span>}
+          {work.isFavorite !== undefined && <FavoriteButton work={work} showCount />}
         </div>
       </div>
     </article>

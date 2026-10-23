@@ -1,3 +1,4 @@
+import '../lib/theme';
 import { Component, lazy, Suspense, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -5,6 +6,7 @@ import { Layout } from './Layout';
 import { PREVIEW_ENABLED } from '../lib/environment';
 import WelcomePage from '../pages/WelcomePage';
 import { AuthProvider } from '../features/auth/AuthProvider';
+const HomePage = lazy(() => import('../pages/HomePage'));
 const NotificationsPage = lazy(() => import('../features/notifications/NotificationsPage'));
 const LibraryPage = lazy(() => import('../features/library/LibraryPage'));
 const SavedPage = lazy(() => import('../features/offline/SavedPage'));
@@ -12,7 +14,8 @@ const SearchPage = lazy(() => import('../features/discovery/SearchPage'));
 const SearchGate = lazy(() => import('../features/auth/RequireSession'));
 const WorkPage = lazy(() => import('../features/works/WorkPage'));
 const AccountPage = lazy(() => import('../features/auth/AccountPage'));
-const AboutPage = lazy(() => import('../pages/AboutPage'));
+const ExplorePage = lazy(() => import('../features/discovery/ExplorePage'));
+const ResultsPage = lazy(() => import('../features/discovery/ResultsPage'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'));
 const preview = PREVIEW_ENABLED
   ? {
@@ -62,7 +65,15 @@ export default function App() {
                   <Route index element={<Navigate to="/welcome" replace />} />
                   <Route path="welcome" element={<WelcomePage />} />
                   <Route
-                    path="explore"
+                    path="home"
+                    element={
+                      <SearchGate>
+                        <HomePage />
+                      </SearchGate>
+                    }
+                  />
+                  <Route
+                    path="search"
                     element={
                       <SearchGate>
                         <SearchPage />
@@ -70,10 +81,18 @@ export default function App() {
                     }
                   />
                   <Route
+                    path="explore/:categoryId?"
+                    element={
+                      <SearchGate>
+                        <ExplorePage />
+                      </SearchGate>
+                    }
+                  />
+                  <Route
                     path="awards"
                     element={
                       <SearchGate>
-                        <SearchPage awards />
+                        <ResultsPage awards />
                       </SearchGate>
                     }
                   />
@@ -110,7 +129,15 @@ export default function App() {
                     }
                   />
                   <Route path="account" element={<AccountPage />} />
-                  <Route path="about" element={<AboutPage />} />
+                  <Route
+                    path="results"
+                    element={
+                      <SearchGate>
+                        <ResultsPage />
+                      </SearchGate>
+                    }
+                  />
+                  <Route path="about" element={<Navigate to="/welcome" replace />} />
                   {preview && (
                     <Route path="preview" element={<preview.Frame />}>
                       <Route path="explore" element={<preview.Explore />} />

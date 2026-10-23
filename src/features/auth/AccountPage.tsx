@@ -1,12 +1,19 @@
+import { Moon, LogOut, HardDrive, ChevronRight } from 'lucide-react';
+import { PushSettings } from '../notifications/PushSettings';
+import { useTheme } from '../../lib/theme';
+import './settings.css';
 import { useState } from 'react';
 import { libraryMessage } from '../library/client';
-import { Navigate, Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import { PolicyLinks } from '../../components/PolicyLinks';
+import { AccountAvatar } from './AccountAvatar';
 import { useAuth } from './context';
 export default function AccountPage() {
+  const { theme, setTheme } = useTheme();
   const [confirmDelete, setConfirmDelete] = useState(false),
     [deleting, setDeleting] = useState(false),
     [deleteError, setDeleteError] = useState('');
-  const { session, busy, logout, deleteAccount, error, offline } = useAuth();
+  const { session, busy, logout, deleteAccount, error, offline, profile } = useAuth();
   if (busy)
     return (
       <div className="loading-state" role="status">
@@ -15,25 +22,49 @@ export default function AccountPage() {
     );
   if (!session) return <Navigate to="/welcome" replace />;
   return (
-    <div className="page-container reading-page">
-      <span className="eyebrow">YOUR ACCOUNT</span>
-      <h1>{offline ? 'オフラインで利用中' : 'ログインできました。'}</h1>
-      <p>
-        {offline
-          ? '前回確認した同じアカウントの、期限内の保存資料を利用できます。最新の資格は通信に接続したときに確認します。'
-          : '学校アカウントと利用資格を確認しました。'}
-      </p>
-      <p>先輩の問いを、キーワードやテーマから探してみましょう。</p>
-      <Link className="button primary" to="/explore">
-        作品を探す
-      </Link>
-      <Link className="button secondary" to="/saved">
-        端末の保存を開く
-      </Link>
-      <Link className="button secondary" to="/library">
-        ライブラリを開く
-      </Link>
-      <details>
+    <div className="page-container settings-page">
+      <h1 className="sr-only">アカウント設定</h1>
+      <div className="settings-profile">
+        <AccountAvatar />
+        <div>
+          {profile?.displayName || '学校のGoogleアカウント'}
+          {offline && <small>オフラインで利用中</small>}
+        </div>
+      </div>
+      <section className="settings-group" aria-label="表示と通知">
+        <div className="setting-row">
+          <Moon size={21} />
+          <div className="setting-copy">
+            <span>テーマ</span>
+            <small>{theme === 'dark' ? 'ダーク' : 'ライト'}</small>
+          </div>
+          <button
+            className="setting-switch"
+            role="switch"
+            aria-label="ダークモード"
+            aria-checked={theme === 'dark'}
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
+            <span />
+          </button>
+        </div>
+        <PushSettings compact />
+        <Link className="setting-row saved-setting" to="/saved">
+          <HardDrive size={21} />
+          <span>端末に保存した資料</span>
+          <ChevronRight size={18} />
+        </Link>
+      </section>
+      <section className="settings-group settings-links" aria-label="サポート">
+        <PolicyLinks settings />
+      </section>
+      <section className="settings-group" aria-label="アカウントの管理">
+        <button className="setting-row setting-action" onClick={() => void logout()}>
+          <LogOut size={21} />
+          <span>ログアウト</span>
+        </button>
+      </section>
+      <details className="settings-delete">
         <summary>アカウントを削除する</summary>
         <p>
           閲覧・検索履歴、お気に入り、報告、学校アカウントのアプリ利用登録を削除します。学校のGoogleアカウントや作品そのものは削除しません。端末内の保存も利用できなくなります。
@@ -63,14 +94,6 @@ export default function AccountPage() {
         {deleteError && <p role="alert">{deleteError}</p>}
       </details>
       {error && <p role="alert">{error}</p>}
-      <button
-        className="button secondary"
-        onClick={() => {
-          void logout();
-        }}
-      >
-        ログアウト
-      </button>
     </div>
   );
 }

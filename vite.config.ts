@@ -76,7 +76,7 @@ export default defineConfig(({ command, mode }) => {
               else add('/' + path.replace(/^public\//, ''), readFileSync(path));
             }
           }
-          walk('public/pdfjs/6.4.299');
+          walk('public/embedpdf/2.15.1');
           writeFileSync(
             join(options.dir!, 'pdf-offline-manifest.json'),
             JSON.stringify({ version: '1', files }),
@@ -109,7 +109,7 @@ export default defineConfig(({ command, mode }) => {
                 : [],
           },
           globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'],
-          globIgnores: ['**/pdf-runtime-*.js', '**/pdf.worker*', 'pdfjs/**'],
+          globIgnores: ['**/pdf-runtime-*.js', '**/pdf.worker*', 'pdfjs/**', 'embedpdf/**'],
           maximumFileSizeToCacheInBytes: 2000000,
         },
         manifest: {

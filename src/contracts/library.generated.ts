@@ -10,6 +10,7 @@ export interface LibraryPageDto {
   version: "1";
   items: LibraryItemDto[];
   nextCursor: string | null;
+  stats?: StatsDto;
 }
 
 export interface FavoriteDto {
@@ -31,4 +32,17 @@ export interface ReceiptDto {
   version: "1";
   id: string;
   status: "received" | "pending" | "complete";
+}
+
+export interface ViewRecordedDto {
+  version: "1";
+  recorded: boolean;
+  item?: LibraryItemDto;
+  stats?: StatsDto;
+}
+
+export interface HistoryDeletedDto {
+  version: "1";
+  deleted: boolean;
+  stats?: StatsDto;
 }

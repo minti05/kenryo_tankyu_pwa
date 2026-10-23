@@ -1,0 +1,76 @@
+.home-page {
+  padding-block: 28px 48px;
+}
+.home-page > h1:not(.sr-only) {
+  font-size: 1.5rem;
+  margin: 0 0 24px;
+}
+.krgp-card {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 30px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  text-decoration: none;
+}
+.krgp-card > svg {
+  flex-shrink: 0;
+}
+.krgp-card > svg:last-child {
+  margin-left: auto;
+}
+.krgp-card span {
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+}
+.krgp-card h2 {
+  font-size: 1.375rem;
+  margin: 4px 0;
+}
+.krgp-card p {
+  font-size: 0.8125rem;
+  margin: 0;
+  color: var(--muted);
+}
+.home-page section {
+  margin-top: 32px;
+}
+.home-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.home-section-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.0625rem;
+  margin: 0;
+}
+.home-page section > p {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+@media (max-width: 767px) {
+  .krgp-card {
+    gap: 14px;
+    padding: 22px 16px;
+  }
+  .krgp-card > svg:first-child {
+    width: 30px;
+  }
+  .krgp-card span {
+    font-size: 0.5rem;
+  }
+  .krgp-card h2 {
+    font-size: 1.125rem;
+  }
+  .krgp-card p {
+    font-size: 0.75rem;
+  }
+}

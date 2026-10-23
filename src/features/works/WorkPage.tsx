@@ -1,4 +1,7 @@
-import { WorkActions } from '../library/WorkActions';
+import { cacheView } from '../library/cache';
+import type { ViewRecordedDto } from '../../contracts/library.generated';
+import { DOCUMENT_ORDER } from '../discovery/search';
+import { WorkReader } from './WorkReader';
 import { operation } from '../library/client';
 import OfflineWorkPage from '../offline/OfflineWorkPage';
 import { deleteSaved, listSaved, readSaved, saveViewed, type CacheSession } from '../offline/store';
@@ -6,13 +9,11 @@ import { preparePdfAssets } from '../offline/assets';
 import type { SearchWorkDto } from '../../contracts/discovery.generated';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/context';
 import type { WorkDetailDto, WorkDocumentDto } from '../../contracts/documents.generated';
-import { CategoryArt } from '../../components/CategoryArt';
-import { categoryLabel, DOCUMENT_LABELS } from '../discovery/search';
 import { ApiError } from '../../lib/api-client';
-import { readPdfResponse, safePdfName, type PdfData } from './pdf-data';
+import { readPdfResponse, type PdfData } from './pdf-data';
 import styles from './WorkPage.module.css';
 const PdfViewer = lazy(() => import('./PdfViewer'));
 function message(error: unknown) {
@@ -53,14 +54,16 @@ function validDetail(data: WorkDetailDto, id: string) {
 }
 export default function WorkPage() {
   const { offline } = useAuth();
+  useEffect(() => {
+    // Overlap SDK loading with metadata/authorized PDF fetches. No document or worker is retained.
+    void import('./pdf-runtime').then((runtime) => runtime.loadViewer()).catch(() => {});
+  }, []);
   return offline ? <OfflineWorkPage /> : <OnlineWorkPage />;
 }
 function OnlineWorkPage() {
   const { id = '' } = useParams(),
     [params, setParams] = useSearchParams(),
-    { session, request, cacheSession } = useAuth(),
-    [shareStatus, setShareStatus] = useState(''),
-    [manualCopy, setManualCopy] = useState('');
+    { session, request, cacheSession } = useAuth();
   const detail = useQuery({
     queryKey: ['work', session?.uid, id],
     enabled: !!session && /^\d{8}$/.test(id),
@@ -90,8 +93,6 @@ function OnlineWorkPage() {
     gcTime: 0,
     refetchOnWindowFocus: true,
   });
-  const from = params.get('from'),
-    back = from && /^\/(explore|awards|library)(\?|$)/.test(from) ? from : '/explore';
   if (!/^\d{8}$/.test(id))
     return (
       <div className="page-container empty-state">
@@ -113,111 +114,47 @@ function OnlineWorkPage() {
         <button className="button secondary" onClick={() => void detail.refetch()}>
           作品情報を読み直す
         </button>
-        <Link to={back}>一覧へ戻る</Link>
       </div>
     );
   const { work, documents } = detail.data,
     selected =
       documents.find((d) => d.kind === params.get('kind')) ??
-      ['poster', 'report', 'thesis', 'slide']
-        .map((kind) => documents.find((d) => d.kind === kind))
-        .find(Boolean);
-  async function share() {
-    const url = new URL('/works/' + id, location.origin);
-    if (selected) url.searchParams.set('kind', selected.kind);
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: '探究アーカイブ', url: url.href });
-        setShareStatus('共有しました。');
-        return;
-      } catch (e) {
-        if (e && typeof e === 'object' && 'name' in e && e.name === 'AbortError') return;
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(url.href);
-      setShareStatus('作品のリンクをコピーしました。リンク先でも学校のログインが必要です。');
-    } catch {
-      setManualCopy(url.href);
-      setShareStatus('下のリンクを選択してコピーしてください。');
-    }
-  }
+      DOCUMENT_ORDER.map((kind) => documents.find((d) => d.kind === kind)).find(
+        (doc) => doc?.state === 'available',
+      ) ??
+      DOCUMENT_ORDER.map((kind) => documents.find((d) => d.kind === kind)).find(Boolean);
   return (
-    <div className="page-container">
-      <Link to={back} className={styles.back}>
-        ← 一覧へ戻る
-      </Link>
-      <header className={styles.intro}>
-        <CategoryArt category={work.category1} />
-        <div>
-          <p>
-            {work.enterYear}年度入学 · {work.course === 'tankyu' ? '探究科' : '普通科'} ·{' '}
-            {categoryLabel(work.category1)}
-          </p>
-          <h1>{work.title}</h1>
-          <p>{work.author}</p>
-          <button className="button secondary" onClick={() => void share()}>
-            作品のリンクを共有
-          </button>
-          {shareStatus && <p role="status">{shareStatus}</p>}
-          {manualCopy && (
-            <input
-              aria-label="共有する作品のリンク"
-              readOnly
-              value={manualCopy}
-              onFocus={(e) => e.target.select()}
-            />
-          )}
-        </div>
-      </header>
-      {work.summary && (
-        <section className={styles.summary}>
-          <h2>この探究について</h2>
-          <p>{work.summary}</p>
-        </section>
+    <WorkReader
+      work={work}
+      kind={selected?.kind}
+      documents={documents}
+      onKind={(kind) => {
+        const next = new URLSearchParams(params);
+        next.set('kind', kind);
+        setParams(next, { replace: true });
+      }}
+    >
+      {selected ? (
+        <DocumentPane
+          key={`${session!.uid}:${cacheSession?.epoch}:${cacheSession?.fence}:${id}:${documents.map((d) => `${d.kind}:${d.revision}:${d.bytes}:${d.state}`).join()}`}
+          id={id}
+          work={work}
+          document={selected}
+          onRefresh={() => void detail.refetch()}
+        />
+      ) : (
+        <p>この作品には閲覧できる資料がありません。</p>
       )}
-      <WorkActions key={work.documentID} work={work} />
-      <section aria-label="資料">
-        <div className={styles.tabs} role="group" aria-label="資料の種類">
-          {documents.map((d) => (
-            <button
-              key={d.kind}
-              aria-pressed={selected?.kind === d.kind}
-              onClick={() => {
-                const next = new URLSearchParams(params);
-                next.set('kind', d.kind);
-                setParams(next);
-              }}
-            >
-              {DOCUMENT_LABELS[d.kind]}
-            </button>
-          ))}
-        </div>
-        {selected ? (
-          <DocumentPane
-            key={`${session!.uid}:${id}:${selected.kind}:${selected.revision}`}
-            id={id}
-            title={work.title}
-            work={work}
-            document={selected}
-            onRefresh={() => void detail.refetch()}
-          />
-        ) : (
-          <p>この作品には閲覧できる資料がありません。</p>
-        )}
-      </section>
-    </div>
+    </WorkReader>
   );
 }
 function DocumentPane({
   id,
-  title,
   work,
   document: doc,
   onRefresh,
 }: {
   id: string;
-  title: string;
   work: SearchWorkDto;
   document: WorkDocumentDto;
   onRefresh: () => void;
@@ -230,15 +167,23 @@ function DocumentPane({
     [historyError, setHistoryError] = useState(false),
     owner = useRef<{ cache: CacheSession; session: NonNullable<typeof session> } | null>(null),
     request = useRef(requestResponse),
-    [data, setData] = useState<(PdfData & { url: string }) | null>(null),
+    [loaded, setData] = useState<{ path: string; pdf: PdfData } | null>(null),
+    memory = useRef(new Map<string, PdfData>()),
     [error, setError] = useState(''),
-    [retry, setRetry] = useState(0),
-    [viewed, setViewed] = useState(false),
-    [saveState, setSaveState] = useState<'idle' | 'checking' | 'ready'>('idle'),
-    [saveMessage, setSaveMessage] = useState('');
-  const prepared = useRef(0),
-    alive = useRef(true),
+    [selection, setSelection] = useState(''),
+    [pending, setPending] = useState(true),
+    [retry, setRetry] = useState(0);
+  const query = useQueryClient();
+  const alive = useRef(true),
     path = `/api/works/${id}/pdf/${doc.kind}?revision=${doc.revision}`;
+  const data = !pending && loaded?.path === path ? loaded.pdf : null;
+  if (selection !== path) {
+    setSelection(path);
+    setPending(true);
+    setSavedMessage('');
+    setHistoryError(false);
+    setError('');
+  }
   useEffect(() => {
     owner.current = cacheSession && session ? { cache: cacheSession, session } : null;
   }, [cacheSession, session]);
@@ -254,13 +199,16 @@ function DocumentPane({
   useEffect(() => {
     if (doc.state !== 'available' || doc.bytes === null || !doc.revision) return;
     const controller = new AbortController();
-    let objectUrl: string | undefined;
+    saved.current = false;
     void (async () => {
       try {
         const startedMono = performance.now();
-        const cached = owner.current
-          ? await readSaved(owner.current.cache, id, doc.kind, doc.revision!).catch(() => null)
-          : null;
+        const resident = memory.current.get(path);
+        const cached =
+          resident ??
+          (owner.current
+            ? await readSaved(owner.current.cache, id, doc.kind, doc.revision!).catch(() => null)
+            : null);
         let pdf: PdfData;
         if (cached) {
           const head = await request.current(path, {
@@ -269,10 +217,11 @@ function DocumentPane({
             headers: { Accept: 'application/pdf' },
           });
           if (
+            head.headers.get('Content-Type')?.split(';')[0] !== 'application/pdf' ||
+            cached.blob.size !== doc.bytes ||
             head.headers.get('X-Document-Revision') !== cached.revision ||
-            Number(head.headers.get('Content-Length')) !== cached.bytes ||
-            (head.headers.get('X-Content-SHA256') &&
-              head.headers.get('X-Content-SHA256') !== cached.sha256) ||
+            Number(head.headers.get('Content-Length')) !== cached.blob.size ||
+            head.headers.get('X-Content-SHA256') !== cached.sha256 ||
             !Number.isFinite(Date.parse(head.headers.get('X-Authorized-At') ?? ''))
           )
             throw new ApiError(409, 'document_changed');
@@ -295,31 +244,35 @@ function DocumentPane({
           });
         }
         if (!controller.signal.aborted) {
-          objectUrl = URL.createObjectURL(pdf.blob);
-          setData({ ...pdf, url: objectUrl });
+          memory.current.set(path, pdf);
+          setData({ path, pdf });
+          setPending(false);
           setError('');
         }
       } catch (e) {
         if (!controller.signal.aborted) {
           if (owner.current && e instanceof ApiError && [404, 409, 413, 422].includes(e.status))
             await deleteSaved(owner.current.cache, id, doc.kind).catch(() => {});
+          if (controller.signal.aborted) return;
+          memory.current.clear();
+          setData(null);
           setError(message(e));
         }
       }
     })();
     return () => {
       controller.abort();
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [doc.bytes, doc.revision, doc.state, doc.kind, id, path, retry]);
   async function recordView() {
     if (historyStatus.current !== 'idle') return;
     historyStatus.current = 'pending';
     try {
-      await jsonRequest('/api/history', {
+      const result = await jsonRequest<ViewRecordedDto>('/api/history', {
         method: 'POST',
         body: JSON.stringify({ documentID: id, ...historyIntent.current }),
       });
+      if (session) await cacheView(query, session.uid, result);
       historyStatus.current = 'done';
       if (alive.current) setHistoryError(false);
     } catch {
@@ -328,17 +281,16 @@ function DocumentPane({
     }
   }
   async function onViewed() {
-    setViewed(true);
     void recordView();
     if (saved.current || !data || !owner.current) return;
     saved.current = true;
     const identity = owner.current;
-    setSavedMessage('この端末でオフラインでも開けるように準備しています…');
+
     try {
       await saveViewed(identity.cache, identity.session, work, doc.kind, data);
       try {
         await preparePdfAssets();
-        if (alive.current) setSavedMessage('この端末に3日間保存しました。');
+        if (alive.current) setSavedMessage('');
       } catch {
         if (alive.current)
           setSavedMessage(
@@ -348,33 +300,6 @@ function DocumentPane({
     } catch {
       if (alive.current)
         setSavedMessage('この端末に保存できませんでした。オンラインでは引き続き閲覧できます。');
-    }
-  }
-  async function prepare() {
-    if (!data || saveState === 'checking') return;
-    setSaveState('checking');
-    setSaveMessage('保存する資料を確認しています…');
-    try {
-      const r = await request.current(path, {
-        method: 'HEAD',
-        headers: { Accept: 'application/pdf' },
-      });
-      if (
-        r.headers.get('X-Document-Revision') !== data.revision ||
-        Number(r.headers.get('Content-Length')) !== data.blob.size ||
-        (r.headers.get('X-Content-SHA256') && r.headers.get('X-Content-SHA256') !== data.sha256)
-      )
-        throw new ApiError(409, 'document_changed');
-      if (alive.current) {
-        prepared.current = Date.now();
-        setSaveState('ready');
-        setSaveMessage('準備できました。下のリンクから保存してください。');
-      }
-    } catch (e) {
-      if (alive.current) {
-        setSaveState('idle');
-        setSaveMessage(message(e));
-      }
     }
   }
   if (doc.state !== 'available')
@@ -401,6 +326,7 @@ function DocumentPane({
           className="button secondary"
           onClick={() => {
             setError('');
+            setPending(true);
             setRetry((n) => n + 1);
           }}
         >
@@ -413,25 +339,15 @@ function DocumentPane({
     );
   return (
     <>
-      <p className={styles.documentMeta}>
-        {DOCUMENT_LABELS[doc.kind]} · {((doc.bytes ?? 0) / 1_000_000).toFixed(2)}MB · 版{' '}
-        {doc.revision?.slice(0, 8)}
-      </p>
-      {data ? (
-        <Suspense fallback={<p role="status">PDFビューアを準備しています…</p>}>
-          <PdfViewer blob={data.blob} onReady={() => void onViewed()} />
-        </Suspense>
-      ) : (
-        <p role="status">PDFを取得しています…</p>
+      {loaded && (
+        <div className={styles.pdfHost} hidden={!data}>
+          <Suspense fallback={<p role="status">PDFビューアを準備しています…</p>}>
+            <PdfViewer blob={loaded.pdf.blob} visible={!!data} onReady={() => void onViewed()} />
+          </Suspense>
+        </div>
       )}
-      <section className={styles.download} aria-label="資料の保存" data-viewed={viewed}>
-        <h2>資料を手元に</h2>
-        <p>
-          ダウンロードしたPDFは3日後も自動削除されません。学校の利用規約を守り、再配布や個人情報の扱いにご注意ください。
-        </p>
-        <p>
-          アプリ内の保存は、オンラインで閲覧した時点から3日間です。オフラインで開いても期限は延びません。
-        </p>
+      {!data && <p role="status">PDFを取得しています…</p>}
+      <div className={styles.readerNotice}>
         {historyError && (
           <p role="status">
             閲覧履歴を記録できませんでした。
@@ -441,35 +357,7 @@ function DocumentPane({
           </p>
         )}
         {savedMessage && <p role="status">{savedMessage}</p>}
-        <button
-          className="button primary"
-          disabled={!data || saveState === 'checking'}
-          onClick={() => void prepare()}
-        >
-          ダウンロード
-        </button>
-        {saveMessage && <p role="status">{saveMessage}</p>}
-        {saveState === 'ready' && data?.url && (
-          <a
-            className="button secondary"
-            href={data!.url}
-            download={safePdfName(id, doc.kind, title)}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => {
-              if (Date.now() - prepared.current > 5000 || Date.now() < prepared.current) {
-                e.preventDefault();
-                void prepare();
-              }
-            }}
-          >
-            PDFを端末に保存
-          </a>
-        )}
-        <p className={styles.hint}>
-          iPadなどで保存先を選べない場合は、開いたPDFの共有メニューから「ファイルに保存」を選んでください。
-        </p>
-      </section>
+      </div>
     </>
   );
 }

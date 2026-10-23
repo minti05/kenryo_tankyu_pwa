@@ -16,7 +16,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ApiError, createApiClient, createApiTransport } from '../../lib/api-client';
 import { initializeAuth, authConfigured } from './firebase';
-import { AuthContext, type Session } from './context';
+import { AuthContext, type AuthState, type Session } from './context';
 function message(error: unknown): string {
   const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
   const messages: Record<string, string> = {
@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [session, setSession] = useState<Session | null>(null),
+    [profile, setProfile] = useState<NonNullable<AuthState['profile']> | null>(null),
     [signedIn, setSignedIn] = useState(false),
     [offline, setOffline] = useState(false),
     [cacheSession, setCacheSession] = useState<CacheSession | null>(null);
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setOffline(false);
           query.clear();
           const user = value.auth.currentUser;
+          setProfile(user ? { displayName: user.displayName, photoURL: user.photoURL } : null);
           setSignedIn(!!user);
           if (!user) {
             await revokeCache().catch(() => {});
@@ -188,6 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     generation.current++;
     setSession(null);
+    setProfile(null);
     setCacheSession(null);
     setOffline(false);
     query.clear();
@@ -286,10 +289,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
   async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+    const ticket = generation.current;
+    const uid = session?.uid;
     const response = await requestResponse(path, options);
     if (!response.headers.get('content-type')?.includes('application/json'))
       throw new ApiError(response.status, 'invalid_response');
-    return response.json() as Promise<T>;
+    const value = (await response.json()) as T;
+    if (ticket !== generation.current || runtime.current?.auth.currentUser?.uid !== uid)
+      throw new ApiError(401, 'session_changed');
+    return value;
   }
   useEffect(() => {
     const cleanup = () => {
@@ -336,6 +344,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         busy,
         error,
         session,
+        profile,
         signedIn,
         login,
         logout,

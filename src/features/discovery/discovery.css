@@ -1,0 +1,321 @@
+.query-form {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 30px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.query-form:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.query-form input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  padding: 12px 20px;
+  font: inherit;
+  font-size: 1rem;
+  background: transparent;
+  color: var(--text);
+}
+.query-form button {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  min-width: 56px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: var(--canvas);
+  color: var(--text);
+  cursor: pointer;
+}
+.explore-page,
+.results-page {
+  padding-block: 32px 48px;
+}
+.explore-page header,
+.results-page header {
+  margin-bottom: 28px;
+}
+.explore-page h1,
+.results-page h1 {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  margin: 8px 0;
+}
+.explore-page header p {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin: 8px 0;
+}
+.genre-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.genre-card {
+  --genre-color: #777;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-start;
+  min-height: 126px;
+  overflow: hidden;
+  border-radius: 12px;
+  padding: 20px 16px;
+  background: color-mix(in srgb, var(--genre-color) 14%, var(--surface));
+  color: var(--text);
+  text-decoration: none;
+  border-left: 5px solid var(--genre-color);
+  transition: transform 0.15s;
+}
+.genre-card[data-category='society'] {
+  --genre-color: #d83d00;
+}
+.genre-card[data-category='history'] {
+  --genre-color: #d88c00;
+}
+.genre-card[data-category='rights'] {
+  --genre-color: #492256;
+}
+.genre-card[data-category='international'] {
+  --genre-color: #1d00d8;
+}
+.genre-card[data-category='business'] {
+  --genre-color: #00d89e;
+}
+.genre-card[data-category='industry'] {
+  --genre-color: #b1d800;
+}
+.genre-card[data-category='education'] {
+  --genre-color: #d80041;
+}
+.genre-card[data-category='environment'] {
+  --genre-color: #00d827;
+}
+.genre-card[data-category='science'] {
+  --genre-color: #0070d8;
+}
+.genre-card[data-category='technology'] {
+  --genre-color: #00d8cd;
+}
+.genre-card[data-category='health'] {
+  --genre-color: #d80089;
+}
+.genre-card[data-category='art'] {
+  --genre-color: #d85e00;
+}
+.genre-card[data-category='life'] {
+  --genre-color: #d4d800;
+}
+.genre-card[data-category='other'] {
+  --genre-color: #85817b;
+}
+.genre-card span {
+  position: relative;
+  z-index: 2;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  max-width: 90%;
+}
+.genre-card picture {
+  position: absolute;
+  bottom: -12px;
+  right: -10px;
+  width: 84px;
+  height: 84px;
+  opacity: 0.5;
+  transform: rotate(-12deg);
+  z-index: -1;
+}
+.genre-card picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.genre-card > svg {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+}
+.genre-card:hover {
+  transform: translateY(-2px);
+}
+.category-heading {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding-block: 20px;
+}
+.category-heading picture {
+  width: 72px;
+  flex-shrink: 0;
+}
+.category-heading picture img {
+  width: 100%;
+  height: 72px;
+  object-fit: contain;
+}
+.subcategory-grid {
+  display: grid;
+  gap: 12px;
+}
+.subcategory-grid a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+.subcategory-grid a:first-child {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+.subcategory-grid a:hover {
+  border-color: var(--accent);
+}
+.search-page {
+  max-width: 800px;
+  padding-block: 28px 48px;
+}
+.search-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.category-entry {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 22px 4px;
+  margin-block: 20px;
+  border-block: 1px solid var(--line);
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+.category-entry > svg:first-child {
+  color: var(--accent);
+}
+.category-entry > svg:last-child {
+  margin-left: auto;
+}
+.history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.history-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 1rem;
+}
+.search-history p {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.search-history li a {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  text-decoration: none;
+  font-size: 0.9375rem;
+}
+.search-history li a svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.search-history li button {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.search-history li button:hover {
+  background: var(--accent-soft);
+}
+.awards-query {
+  max-width: 600px;
+  margin-bottom: 24px;
+}
+@media (min-width: 768px) {
+  .genre-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .subcategory-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .genre-card {
+    min-height: 146px;
+    padding: 24px;
+  }
+  .genre-card picture {
+    width: 110px;
+    height: 110px;
+  }
+}
+@media (min-width: 1400px) {
+  .genre-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .genre-card {
+    transition: none;
+  }
+}
+.desktop-search {
+  display: none;
+  position: relative;
+  min-width: 0;
+  grid-column: 2;
+}
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 45;
+  max-height: min(65vh, 520px);
+  overflow-y: auto;
+  padding: 14px 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 8px 32px #0002;
+}
+.compact-history .history-heading h2 {
+  font-size: 0.8125rem;
+}
+.compact-history .history-list {
+  margin: 0;
+}
+.compact-history .history-list li:last-child {
+  border-bottom: 0;
+}
+.compact-history .history-list a {
+  min-height: 48px;
+  font-size: 0.875rem;
+}
+@media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
+  .desktop-search {
+    display: block;
+  }
+}
