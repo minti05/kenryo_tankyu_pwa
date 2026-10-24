@@ -3,6 +3,7 @@ import type {
   EmbedPdfContainer,
   DocumentManagerPlugin,
   TilingPlugin,
+  ScrollPlugin,
   PDFViewerConfig,
   ZoomMode,
   UIPlugin,
@@ -20,15 +21,19 @@ interface Runtime {
   loaded: Map<Blob, { id: string; promise: Promise<void> }>;
   painted: Set<string>;
   nextId: number;
+  scroll: ReturnType<ScrollPlugin['provides']>;
+  layouts: Set<string>;
 }
 export default function PdfViewer({
   blob,
   onReady,
   visible = true,
+  pageRequest,
 }: {
   blob: Blob;
   onReady: () => void;
   visible?: boolean;
+  pageRequest?: { page: number; nonce: number } | null | undefined;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const viewer = useRef<EmbedPdfContainer | null>(null);
@@ -38,7 +43,18 @@ export default function PdfViewer({
   const notify = useRef<(() => void) | null>(null);
   const [error, setError] = useState('');
   const { theme } = useTheme();
-  const bindSearch = useContext(ReaderContext)?.bindSearch;
+  const reader = useContext(ReaderContext);
+  const bindSearch = reader?.bindSearch;
+  const shown = visible && reader?.pdfVisible !== false;
+  const desiredPage = useRef(pageRequest);
+  const jump = useRef<(() => void) | null>(null);
+  const appliedJump = useRef('');
+  const [referencePage, setReferencePage] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  useEffect(() => {
+    desiredPage.current = pageRequest;
+    jump.current?.();
+  }, [pageRequest]);
   useEffect(() => {
     ready.current = onReady;
   }, [onReady]);
@@ -131,7 +147,30 @@ export default function PdfViewer({
         ),
       });
       const documents = registry.getPlugin<DocumentManagerPlugin>('document-manager')!.provides();
-      const state: Runtime = { documents, ui, loaded: new Map(), painted: new Set(), nextId: 0 };
+      const scroll = registry.getPlugin<ScrollPlugin>('scroll')!.provides();
+      const state: Runtime = {
+        documents,
+        ui,
+        scroll,
+        layouts: new Set(),
+        loaded: new Map(),
+        painted: new Set(),
+        nextId: 0,
+      };
+      cleanups.push(
+        scroll.onLayoutReady(({ documentId }) => {
+          state.layouts.add(documentId);
+          jump.current?.();
+        }),
+      );
+      cleanups.push(
+        scroll.onPageChange(({ documentId, pageNumber }) => {
+          if (active.current && state.loaded.get(active.current)?.id === documentId) {
+            setCurrentPage(pageNumber);
+            if (desiredPage.current) setReferencePage(pageNumber);
+          }
+        }),
+      );
       const tiling = registry.getPlugin<TilingPlugin>('tiling')!.provides();
       cleanups.push(
         tiling.onTileRendering(({ documentId, tiles }) => {
@@ -163,7 +202,7 @@ export default function PdfViewer({
     };
   }, [bindSearch]);
   useEffect(() => {
-    if (!visible) {
+    if (!shown) {
       bindSearch?.(null);
       return;
     }
@@ -214,7 +253,28 @@ export default function PdfViewer({
           clearTimeout(timer);
           ready.current();
         };
+        jump.current = () => {
+          const target = desiredPage.current;
+          if (closed || !target || !state.layouts.has(id) || active.current !== blob) return;
+          const key = `${id}:${target.nonce}`;
+          if (appliedJump.current === key) return;
+          const scope = state.scroll.forDocument(id);
+          if (target.page < 1 || target.page > scope.getTotalPages()) {
+            setError('参照ページを確認できませんでした。資料を開いて確認してください。');
+            return;
+          }
+          scope.scrollToPage({ pageNumber: target.page, behavior: 'instant' });
+          if (scope.getCurrentPage() === target.page) appliedJump.current = key;
+          setCurrentPage(scope.getCurrentPage());
+          setReferencePage(scope.getCurrentPage());
+        };
         state.documents.setActiveDocument(id);
+        // Wait for the newly active viewport to receive its layout before jumping.
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        );
+        if (closed) return;
+        jump.current?.();
         bindSearch?.({
           toggle: () => state.ui.forDocument(id).toggleSidebar('right', 'main', 'search-panel'),
         });
@@ -228,11 +288,15 @@ export default function PdfViewer({
       closed = true;
       clearTimeout(timer);
       notify.current = null;
+      jump.current = null;
       bindSearch?.(null);
     };
-  }, [blob, bindSearch, visible]);
+  }, [blob, bindSearch, shown]);
   return (
-    <section aria-label="PDFビューア">
+    <section aria-label="PDFビューア" className={styles.viewerContainer} data-pdf-page={currentPage}>
+      {shown && pageRequest && referencePage !== null && !error && (
+        <p className={styles.referencePage} role="status">参照先 · {pageRequest.page}ページ</p>
+      )}
       {error && (
         <div role="alert" className="empty-state">
           <p>{error}</p>

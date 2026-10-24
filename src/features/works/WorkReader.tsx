@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Search, Maximize, Minimize, Triangle } from 'lucide-react';
+import { AiSummary } from './AiSummary';
+import { useDesktopReader } from './reader-layout';
+import type { WorkSummaryDto, WorkSummaryEvidenceDto } from '../../contracts/documents.generated';
 import { WorkHeading } from './WorkHeading';
 import { ReaderContext, type ReaderSearch } from './reader-context';
 import { CATEGORY_CATALOG } from '../../contracts/catalog.generated';
@@ -14,14 +17,21 @@ export function WorkReader({
   documents: suppliedDocuments,
   onKind,
   children,
+  summary,
+  onReference,
 }: {
   work?: SearchWorkDto | undefined;
   kind?: string | undefined;
   documents: WorkDocumentDto[];
   onKind: (kind: string) => void;
   children: ReactNode;
+  summary?: WorkSummaryDto | null | undefined;
+  onReference?: (reference: WorkSummaryEvidenceDto) => void;
 }) {
   const documents = orderDocuments(suppliedDocuments);
+  const desktop = useDesktopReader();
+  const [summarySelected, setSummarySelected] = useState(false);
+  const showSummary = !!summary && summarySelected && !desktop;
   const [expanded, setExpanded] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [controls, setControls] = useState(true);
@@ -102,11 +112,21 @@ export function WorkReader({
         })
         .catch(() => {});
   };
+  const openReference = (reference: WorkSummaryEvidenceDto) => {
+    setSummarySelected(false);
+    onReference?.(reference);
+    if (!desktop)
+      requestAnimationFrame(() =>
+        root.current
+          ?.querySelector('[data-reader-surface]')
+          ?.scrollIntoView({ block: 'start', behavior: 'smooth' }),
+      );
+  };
   const category = (id: string) => CATEGORY_CATALOG.find((item) => item.id === id);
   const subcategory = (id: string, sub: string) =>
     category(id)?.subcategories.find((item) => item.id === sub)?.label ?? 'なし';
   return (
-    <ReaderContext.Provider value={{ bindSearch }}>
+    <ReaderContext.Provider value={{ bindSearch, pdfVisible: !showSummary }}>
       <div
         ref={root}
         className={`${styles.workPage} ${fullscreen ? styles.fullscreen : ''}`}
@@ -121,11 +141,19 @@ export function WorkReader({
         )}
         <div ref={bar} className={styles.readerBar}>
           <div className={styles.tabs} role="group" aria-label="資料の種類">
+            {summary && !desktop && !fullscreen && (
+              <button aria-pressed={showSummary} onClick={() => setSummarySelected(true)}>
+                AI要約
+              </button>
+            )}
             {documents.map((doc) => (
               <button
                 key={doc.kind}
-                aria-pressed={kind === doc.kind}
-                onClick={() => onKind(doc.kind)}
+                aria-pressed={!showSummary && kind === doc.kind}
+                onClick={() => {
+                  setSummarySelected(false);
+                  onKind(doc.kind);
+                }}
               >
                 {DOCUMENT_LABELS[doc.kind]}
               </button>
@@ -194,10 +222,15 @@ export function WorkReader({
                 <dd>{subcategory(work.category2, work.subCategory2)}</dd>
               </div>
             </dl>
-            {work.summary && (
+            {!summary && work.summary && (
               <div className={styles.summary}>
                 <h2>この探究について</h2>
                 <p>{work.summary}</p>
+              </div>
+            )}
+            {summary && desktop && onReference && (
+              <div className={styles.aiSidebar}>
+                <AiSummary summary={summary} onReference={openReference} />
               </div>
             )}
           </section>
@@ -237,8 +270,15 @@ export function WorkReader({
             setControls((value) => !value);
           }}
         >
-          {children}
-          {!fullscreen && controls && (
+          <div className={styles.pdfContent} hidden={showSummary}>
+            {children}
+          </div>
+          {showSummary && summary && (
+            <div className={styles.aiPanel}>
+              <AiSummary summary={summary} onReference={openReference} />
+            </div>
+          )}
+          {!showSummary && !fullscreen && controls && (
             <button
               className={`${styles.roundButton} ${styles.searchFloat}`}
               aria-label="PDF内を検索"
@@ -248,7 +288,7 @@ export function WorkReader({
               <Search size={21} />
             </button>
           )}
-          {(controls || fullscreen) && (
+          {!showSummary && (controls || fullscreen) && (
             <button
               ref={screenButton}
               className={`${styles.roundButton} ${styles.fullscreenFloat}`}

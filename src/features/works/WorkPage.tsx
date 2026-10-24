@@ -11,7 +11,11 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/context';
-import type { WorkDetailDto, WorkDocumentDto } from '../../contracts/documents.generated';
+import type {
+  WorkDetailDto,
+  WorkDocumentDto,
+  WorkSummaryEvidenceDto,
+} from '../../contracts/documents.generated';
 import { ApiError } from '../../lib/api-client';
 import { readPdfResponse, type PdfData } from './pdf-data';
 import styles from './WorkPage.module.css';
@@ -64,6 +68,12 @@ function OnlineWorkPage() {
   const { id = '' } = useParams(),
     [params, setParams] = useSearchParams(),
     { session, request, cacheSession } = useAuth();
+  const [pageRequest, setPageRequest] = useState<{
+    kind: string;
+    page: number;
+    nonce: number;
+  } | null>(null);
+  const referenceSequence = useRef(0);
   const detail = useQuery({
     queryKey: ['work', session?.uid, id],
     enabled: !!session && /^\d{8}$/.test(id),
@@ -125,10 +135,23 @@ function OnlineWorkPage() {
       DOCUMENT_ORDER.map((kind) => documents.find((d) => d.kind === kind)).find(Boolean);
   return (
     <WorkReader
+      key={id}
       work={work}
+      summary={detail.data.summary}
+      onReference={(reference: WorkSummaryEvidenceDto) => {
+        const next = new URLSearchParams(params);
+        next.set('kind', reference.kind);
+        setPageRequest({
+          kind: reference.kind,
+          page: reference.page,
+          nonce: ++referenceSequence.current,
+        });
+        setParams(next, { replace: true });
+      }}
       kind={selected?.kind}
       documents={documents}
       onKind={(kind) => {
+        setPageRequest(null);
         const next = new URLSearchParams(params);
         next.set('kind', kind);
         setParams(next, { replace: true });
@@ -140,6 +163,7 @@ function OnlineWorkPage() {
           id={id}
           work={work}
           document={selected}
+          pageRequest={pageRequest?.kind === selected.kind ? pageRequest : null}
           onRefresh={() => void detail.refetch()}
         />
       ) : (
@@ -152,11 +176,13 @@ function DocumentPane({
   id,
   work,
   document: doc,
+  pageRequest,
   onRefresh,
 }: {
   id: string;
   work: SearchWorkDto;
   document: WorkDocumentDto;
+  pageRequest?: { page: number; nonce: number } | null;
   onRefresh: () => void;
 }) {
   const { requestResponse, request: jsonRequest, cacheSession, session } = useAuth(),
@@ -342,7 +368,7 @@ function DocumentPane({
       {loaded && (
         <div className={styles.pdfHost} hidden={!data}>
           <Suspense fallback={<p role="status">PDFビューアを準備しています…</p>}>
-            <PdfViewer blob={loaded.pdf.blob} visible={!!data} onReady={() => void onViewed()} />
+            <PdfViewer blob={loaded.pdf.blob} visible={!!data} pageRequest={pageRequest} onReady={() => void onViewed()} />
           </Suspense>
         </div>
       )}
