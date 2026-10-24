@@ -69,6 +69,7 @@ function OnlineWorkPage() {
     [params, setParams] = useSearchParams(),
     { session, request, cacheSession } = useAuth();
   const [pageRequest, setPageRequest] = useState<{
+    workId: string;
     kind: string;
     page: number;
     nonce: number;
@@ -142,6 +143,7 @@ function OnlineWorkPage() {
         const next = new URLSearchParams(params);
         next.set('kind', reference.kind);
         setPageRequest({
+          workId: id,
           kind: reference.kind,
           page: reference.page,
           nonce: ++referenceSequence.current,
@@ -163,7 +165,7 @@ function OnlineWorkPage() {
           id={id}
           work={work}
           document={selected}
-          pageRequest={pageRequest?.kind === selected.kind ? pageRequest : null}
+          pageRequest={pageRequest?.workId === id && pageRequest.kind === selected.kind ? pageRequest : null}
           onRefresh={() => void detail.refetch()}
         />
       ) : (
