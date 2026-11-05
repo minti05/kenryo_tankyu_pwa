@@ -47,7 +47,10 @@ export async function showArchivePush(
   const current = await activePushBinding().catch(() => null);
   if (!current || data.binding !== current.binding) return;
   await scope.registration.showNotification('探究アーカイブ', {
-    body: '新しいお知らせがあります。アプリで確認してください。',
+    body:
+      typeof data.title === 'string' && data.title.trim()
+        ? Array.from(data.title.trim()).slice(0, 100).join('')
+        : '新しいお知らせがあります。アプリで確認してください。',
     icon: '/icons/app-icon.png',
     tag: 'archive-' + data.noticeId,
     data: { noticeId: data.noticeId, binding: current.binding },

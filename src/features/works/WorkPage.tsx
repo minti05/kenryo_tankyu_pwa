@@ -1,3 +1,5 @@
+import { LoadingIndicator } from '../../components/Loading';
+import { PdfLoading } from '../../components/PdfLoading';
 import { cacheView } from '../library/cache';
 import type { ViewRecordedDto } from '../../contracts/library.generated';
 import { DOCUMENT_ORDER } from '../discovery/search';
@@ -7,7 +9,9 @@ import OfflineWorkPage from '../offline/OfflineWorkPage';
 import { deleteSaved, listSaved, readSaved, saveViewed, type CacheSession } from '../offline/store';
 import { preparePdfAssets } from '../offline/assets';
 import type { SearchWorkDto } from '../../contracts/discovery.generated';
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useContext, useEffect, useRef, useState } from 'react';
+import { ReaderContext } from './reader-context';
+import { DOCUMENT_LABELS } from '../discovery/search';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/context';
@@ -102,7 +106,7 @@ function OnlineWorkPage() {
     },
     staleTime: 0,
     gcTime: 0,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   if (!/^\d{8}$/.test(id))
     return (
@@ -112,11 +116,7 @@ function OnlineWorkPage() {
       </div>
     );
   if (detail.isPending)
-    return (
-      <div className="loading-state" role="status">
-        作品を読み込んでいます…
-      </div>
-    );
+    return <LoadingIndicator className="loading-state" label="作品を読み込み中" />;
   if (detail.isError || !detail.data)
     return (
       <div className="page-container empty-state" role="alert">
@@ -165,8 +165,19 @@ function OnlineWorkPage() {
           id={id}
           work={work}
           document={selected}
-          pageRequest={pageRequest?.workId === id && pageRequest.kind === selected.kind ? pageRequest : null}
+          pageRequest={
+            pageRequest?.workId === id && pageRequest.kind === selected.kind ? pageRequest : null
+          }
           onRefresh={() => void detail.refetch()}
+          alternative={
+            documents.find((d) => d.kind !== selected.kind && d.state === 'available')?.kind
+          }
+          onAlternative={(kind) => {
+            setPageRequest(null);
+            const next = new URLSearchParams(params);
+            next.set('kind', kind);
+            setParams(next, { replace: true });
+          }}
         />
       ) : (
         <p>この作品には閲覧できる資料がありません。</p>
@@ -180,13 +191,22 @@ function DocumentPane({
   document: doc,
   pageRequest,
   onRefresh,
+  alternative,
+  onAlternative,
 }: {
   id: string;
   work: SearchWorkDto;
   document: WorkDocumentDto;
   pageRequest?: { page: number; nonce: number } | null;
   onRefresh: () => void;
+  alternative?: string | undefined;
+  onAlternative: (kind: string) => void;
 }) {
+  const reader = useContext(ReaderContext);
+  const [viewerRetry, setViewerRetry] = useState(0);
+  const [viewerState, setViewerState] = useState<{ blob: Blob; status: 'ready' | 'error' } | null>(
+    null,
+  );
   const { requestResponse, request: jsonRequest, cacheSession, session } = useAuth(),
     [savedMessage, setSavedMessage] = useState(''),
     saved = useRef(false),
@@ -330,6 +350,18 @@ function DocumentPane({
         setSavedMessage('この端末に保存できませんでした。オンラインでは引き続き閲覧できます。');
     }
   }
+  const recoveryActions = (
+    <div className={styles.recoveryActions}>
+      {alternative && (
+        <button className="button secondary" onClick={() => onAlternative(alternative)}>
+          別の資料を開く（{DOCUMENT_LABELS[alternative as keyof typeof DOCUMENT_LABELS]}）
+        </button>
+      )}
+      <button className="button secondary" onClick={reader?.reportDocument}>
+        PDFの問題を報告
+      </button>
+    </div>
+  );
   if (doc.state !== 'available')
     return (
       <div className="empty-state" role="status">
@@ -344,6 +376,7 @@ function DocumentPane({
         <button className="button secondary" onClick={onRefresh}>
           作品情報を読み直す
         </button>
+        {recoveryActions}
       </div>
     );
   if (error)
@@ -363,18 +396,39 @@ function DocumentPane({
         <button className="button secondary" onClick={onRefresh}>
           作品情報を読み直す
         </button>
+        {recoveryActions}
       </div>
     );
   return (
     <>
-      {loaded && (
+      <div className={styles.pdfStage}>
+        {/* Mount the engine during the PDF request; keep prior document pixels hidden. */}
         <div className={styles.pdfHost} hidden={!data}>
-          <Suspense fallback={<p role="status">PDFビューアを準備しています…</p>}>
-            <PdfViewer blob={loaded.pdf.blob} visible={!!data} pageRequest={pageRequest} onReady={() => void onViewed()} />
+          <Suspense fallback={null}>
+            <PdfViewer
+              key={viewerRetry}
+              blob={loaded?.pdf.blob ?? null}
+              visible={!!data}
+              pageRequest={pageRequest}
+              loading={null}
+              onReady={() => {
+                if (!loaded) return;
+                setViewerState({ blob: loaded.pdf.blob, status: 'ready' });
+                void onViewed();
+              }}
+              onError={() => {
+                if (loaded) setViewerState({ blob: loaded.pdf.blob, status: 'error' });
+              }}
+              onRetry={() => {
+                setViewerState(null);
+                setViewerRetry((value) => value + 1);
+              }}
+              recovery={recoveryActions}
+            />
           </Suspense>
         </div>
-      )}
-      {!data && <p role="status">PDFを取得しています…</p>}
+        {(!data || viewerState?.blob !== data.blob) && <PdfLoading key={path} />}
+      </div>
       <div className={styles.readerNotice}>
         {historyError && (
           <p role="status">

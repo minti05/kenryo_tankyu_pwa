@@ -1,5 +1,5 @@
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CATEGORY_CATALOG } from '../../contracts/catalog.generated';
 import { CategoryArt } from '../../components/CategoryArt';
@@ -57,6 +57,17 @@ export default function ExplorePage() {
       ) : (
         <>
           <h1 className="sr-only">探索</h1>
+          <Link className="natural-search-entry" to="/search/chat">
+            <span className="natural-search-symbol">
+              <Sparkles size={24} strokeWidth={1.6} />
+            </span>
+            <div>
+              <strong>AIで探す</strong>
+              <span>興味や疑問を、そのまま。</span>
+            </div>
+            <span className="natural-search-status">内容から探す</span>
+            <ArrowRight size={19} />
+          </Link>
           <div className="genre-grid" aria-label="カテゴリ">
             {CATEGORY_CATALOG.map((c) => (
               <Link className="genre-card" data-category={c.id} key={c.id} to={`/explore/${c.id}`}>

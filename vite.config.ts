@@ -9,6 +9,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(({ command, mode }) => {
   const sample =
     command === 'serve' || loadEnv(mode, process.cwd(), 'VITE_').VITE_ENABLE_PREVIEW === 'true';
+  let buildDirectory = 'dist';
   return {
     resolve: {
       alias: {
@@ -57,6 +58,9 @@ export default defineConfig(({ command, mode }) => {
         : []),
       {
         name: 'pdf-offline-manifest',
+        configResolved(config) {
+          buildDirectory = config.build.outDir;
+        },
         writeBundle(options, bundle) {
           if (!Object.keys(bundle).some((name) => /^assets\/pdf-runtime-/.test(name))) return;
           const files: { url: string; size: number; sha256: string }[] = [];
@@ -108,8 +112,28 @@ export default defineConfig(({ command, mode }) => {
                   ]
                 : [],
           },
+          manifestTransforms: [
+            async (entries) => ({
+              manifest: entries.map((entry) => ({
+                ...entry,
+                integrity:
+                  'sha256-' +
+                  createHash('sha256')
+                    .update(readFileSync(join(buildDirectory, entry.url)))
+                    .digest('base64'),
+              })),
+              warnings: [],
+            }),
+          ],
           globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'],
-          globIgnores: ['**/pdf-runtime-*.js', '**/pdf.worker*', 'pdfjs/**', 'embedpdf/**'],
+          globIgnores: [
+            '**/pdf-runtime-*.js',
+            '**/pdf.worker*',
+            'pdfjs/**',
+            'embedpdf/**',
+            'assets/recover.html',
+            'assets/recover.js',
+          ],
           maximumFileSizeToCacheInBytes: 2000000,
         },
         manifest: {
@@ -123,6 +147,7 @@ export default defineConfig(({ command, mode }) => {
           background_color: '#f7f5f0',
           theme_color: '#8f123f',
           icons: [
+            { src: '/icons/app-icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
             { src: '/icons/app-icon.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           ],
         },

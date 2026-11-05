@@ -110,6 +110,8 @@ export function offlineApi() {
           read: state.noticeRead,
           workId: null,
         };
+        if (path === '/api/notifications/inbox')
+          return json({ version: '1', asOf: new Date().toISOString(), items: [] });
         if (path === '/api/notifications')
           return json({ version: '1', items: [notice], nextCursor: null });
         if (path === '/api/notifications/' + notice.id) return json(notice);

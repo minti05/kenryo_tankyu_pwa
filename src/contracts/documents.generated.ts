@@ -7,6 +7,7 @@ export interface WorkSummaryEvidenceDto {
 }
 
 export interface WorkSummaryDto {
+  keywords?: string[];
   body: string;
   evidence: WorkSummaryEvidenceDto[];
 }

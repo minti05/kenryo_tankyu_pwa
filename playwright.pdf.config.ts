@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   outputDir: 'test-results-pdf',
-  testMatch: 'pdf.spec.ts',
+  testMatch: ['pdf.spec.ts', 'loading.spec.ts'],
   fullyParallel: true,
   workers: 2,
   forbidOnly: !!process.env.CI,

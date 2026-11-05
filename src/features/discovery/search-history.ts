@@ -24,6 +24,39 @@ export function historyMessage(error: unknown) {
     ? '検索履歴が上限に達しました。不要な履歴を削除すると保存できます。'
     : '検索結果は表示できますが、履歴を保存できませんでした。';
 }
+export const searchHistorySaveKey = (
+  uid: string | undefined,
+  params: URLSearchParams,
+  awards: boolean,
+) => {
+  const normalized = new URLSearchParams(params);
+  normalized.delete('cursor');
+  normalized.delete('limit');
+  normalized.sort();
+  return ['search-history-save', uid, awards, normalized.toString()] as const;
+};
+export function recordSearchInBackground(
+  query: QueryClient,
+  uid: string | undefined,
+  request: AuthState['request'],
+  params: URLSearchParams,
+  awards = false,
+) {
+  if (!uid) return;
+  const key = searchHistorySaveKey(uid, params, awards);
+  const attempt = crypto.randomUUID();
+  query.setQueryData(key, { attempt, error: '' });
+  void recordSearch(request, params, awards)
+    .then((value) => {
+      // Logout/account changes clear the cache; a late response must not repopulate it.
+      if (query.getQueryData<{ attempt: string }>(key)?.attempt !== attempt) return;
+      cacheSearchHistory(query, uid, value);
+    })
+    .catch((error) => {
+      if (query.getQueryData<{ attempt: string }>(key)?.attempt === attempt)
+        query.setQueryData(key, { attempt, error: historyMessage(error) });
+    });
+}
 export function historyLabel(parameters: string) {
   const params = new URLSearchParams(parameters);
   const category = CATEGORY_CATALOG.find((c) => c.id === params.get('category'));

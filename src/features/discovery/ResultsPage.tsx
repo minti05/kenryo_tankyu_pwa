@@ -1,8 +1,12 @@
+import { LoadMoreButton } from '../../components/LoadMoreButton';
+import { LoadingSkeleton } from '../../components/Loading';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { skipToken, useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { searchHistorySaveKey } from './search-history';
+import { clearResultsPosition, useResultsPosition } from './results-position';
 import { X, ArrowDownWideNarrow } from 'lucide-react';
 import { SearchFilters } from './SearchFilters';
-import { conditionLabels, SORT_OPTIONS } from './filter-options';
+import { conditionLabels, hasSearchConditions, SORT_OPTIONS } from './filter-options';
 import { useAuth } from '../auth/context';
 import { CATEGORY_CATALOG } from '../../contracts/catalog.generated';
 import type { SearchPageDto } from '../../contracts/discovery.generated';
@@ -25,7 +29,7 @@ export default function ResultsPage({ awards = false }: { awards?: boolean }) {
         <h1>オフラインです</h1>
         <p>新しい作品を探すには通信に接続してください。</p>
         <Link className="button secondary" to="/saved">
-          端末の保存を開く
+          履歴の管理を開く
         </Link>
       </div>
     );
@@ -39,10 +43,11 @@ function OnlineResults({ awards }: { awards: boolean }) {
     q = params.get('q') || '',
     category = CATEGORY_CATALOG.find((c) => c.id === params.get('category'));
   const subcategory = category?.subcategories.find((s) => s.id === params.get('subcategory'));
+  const canSearch = hasSearchConditions(params, awards);
   const endpoint = awards ? '/api/awards' : '/api/works';
   const works = useInfiniteQuery({
     queryKey: ['works', session?.uid, endpoint, raw],
-    enabled: !!session,
+    enabled: !!session && canSearch,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam, signal }) => {
       const p = new URLSearchParams(raw);
@@ -51,22 +56,29 @@ function OnlineResults({ awards }: { awards: boolean }) {
       return request<SearchPageDto>(`${endpoint}?${p}`, { signal });
     },
     getNextPageParam: (last) => last.nextCursor ?? undefined,
-    staleTime: 0,
-    gcTime: 0,
-    refetchOnWindowFocus: true,
+    // Keep the loaded pages when returning from a work. PDF access still revalidates publication.
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
   const items = [
     ...new Map(
       works.data?.pages.flatMap((p) => p.items).map((w) => [w.documentID, w]) ?? [],
     ).values(),
   ];
+  useResultsPosition(session?.uid, endpoint, params, works);
+  const savedHistory = useQuery<{ error: string }>({
+    queryKey: searchHistorySaveKey(session?.uid, params, awards),
+    queryFn: skipToken,
+  });
   function apply(next: URLSearchParams) {
     next.delete('cursor');
+    clearResultsPosition(session?.uid, endpoint, next);
     setParams(next);
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }
   const conditions = conditionLabels(params);
-  const historyError =
-    typeof location.state?.historyError === 'string' ? location.state.historyError : '';
+  const historyError = savedHistory.data?.error ?? '';
   return (
     <div className="page-container results-page">
       <h1 className="sr-only">
@@ -74,7 +86,7 @@ function OnlineResults({ awards }: { awards: boolean }) {
           ? 'KRGP受賞作品'
           : q
             ? `「${q}」の検索結果`
-            : [category?.label, subcategory?.label].filter(Boolean).join(' / ') || 'すべての作品'}
+            : [category?.label, subcategory?.label].filter(Boolean).join(' / ') || '作品を探す'}
       </h1>
       {historyError && <p role="status">{historyError}</p>}
       <div className="results-controls">
@@ -124,11 +136,23 @@ function OnlineResults({ awards }: { awards: boolean }) {
       <section className={styles.results} aria-labelledby="live-results">
         <div className={styles.resultsHeader}>
           <h2 id="live-results">{awards ? '受賞した探究' : '作品一覧'}</h2>
-          <span role="status">{items.length}作品を表示</span>
+          {canSearch && !works.isPending && <span role="status">{items.length}作品を表示</span>}
         </div>
-        {works.isPending ? (
-          <p role="status">作品を探しています…</p>
-        ) : works.isError ? (
+        {!canSearch ? (
+          <div className="empty-state">
+            <p>キーワードか条件を選んで検索してください。</p>
+            <Link className="button secondary" to="/search">
+              検索する
+            </Link>
+          </div>
+        ) : works.isPending ? (
+          <LoadingSkeleton
+            label="作品一覧を読み込み中"
+            cards
+            count={6}
+            className={styles.workGrid}
+          />
+        ) : works.isError && !items.length ? (
           <div role="alert">
             <p>{failure(works.error)}</p>
             <button className="button secondary" onClick={() => void works.refetch()}>
@@ -137,6 +161,7 @@ function OnlineResults({ awards }: { awards: boolean }) {
           </div>
         ) : (
           <>
+            {works.isError && <p role="alert">{failure(works.error)}</p>}
             {items.length ? (
               <div className={styles.workGrid}>
                 {items.map((w) => (
@@ -154,17 +179,23 @@ function OnlineResults({ awards }: { awards: boolean }) {
                     ? '公開情報を確認しながら探しています。'
                     : 'この条件の作品は見つかりませんでした。'}
                 </h3>
-                <p>キーワードを短くしたり、絞り込みを減らしてみてください。</p>
+                {q && !works.hasNextPage ? (
+                  <Link
+                    className="button secondary"
+                    to={`/search/chat?${new URLSearchParams({ q })}`}
+                  >
+                    AIで探す
+                  </Link>
+                ) : (
+                  <p>キーワードを短くしたり、絞り込みを減らしてみてください。</p>
+                )}
               </div>
             )}
             {works.hasNextPage && (
-              <button
-                className="button secondary"
-                disabled={works.isFetchingNextPage}
+              <LoadMoreButton
+                loading={works.isFetchingNextPage}
                 onClick={() => void works.fetchNextPage()}
-              >
-                {works.isFetchingNextPage ? '読み込み中…' : 'さらに表示'}
-              </button>
+              />
             )}
           </>
         )}

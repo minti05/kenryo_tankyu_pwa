@@ -1,13 +1,19 @@
+import '../features/works/work-actions.css';
+import './Modal.css';
 import { useEffect, useRef, type ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 export function Modal({
   title,
   children,
   onClose,
+  variant = 'default',
+  className = '',
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
+  variant?: 'default' | 'confirm';
+  className?: string;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -26,7 +32,7 @@ export function Modal({
   return (
     <dialog
       ref={dialog}
-      className="work-modal"
+      className={`${variant === 'confirm' ? 'confirm-modal' : 'work-modal'} ${className}`}
       aria-label={title}
       onCancel={(e) => {
         e.preventDefault();
@@ -39,18 +45,29 @@ export function Modal({
           onClose();
       }}
     >
-      <div className="work-modal-heading">
-        <h2>{title}</h2>
-        <button
-          className="icon-button"
-          type="button"
-          aria-label={`${title}を閉じる`}
-          onClick={onClose}
-        >
-          <X size={22} />
-        </button>
+      {variant === 'confirm' ? (
+        <div className="confirm-modal-heading">
+          <span className="confirm-modal-icon">
+            <Trash2 size={24} strokeWidth={1.6} />
+          </span>
+          <h2>{title}</h2>
+        </div>
+      ) : (
+        <div className="work-modal-heading">
+          <h2>{title}</h2>
+          <button
+            className="icon-button"
+            type="button"
+            aria-label={`${title}を閉じる`}
+            onClick={onClose}
+          >
+            <X size={22} />
+          </button>
+        </div>
+      )}
+      <div className={variant === 'confirm' ? 'confirm-modal-body' : 'work-modal-body'}>
+        {children}
       </div>
-      <div className="work-modal-body">{children}</div>
     </dialog>
   );
 }

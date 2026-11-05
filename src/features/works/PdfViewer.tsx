@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, useContext } from 'react';
+import { PdfLoading } from '../../components/PdfLoading';
+import { useEffect, useRef, useState, useContext, useCallback, type ReactNode } from 'react';
 import type {
   EmbedPdfContainer,
   DocumentManagerPlugin,
@@ -7,6 +8,7 @@ import type {
   PDFViewerConfig,
   ZoomMode,
   UIPlugin,
+  ViewportPlugin,
 } from '@embedpdf/react-pdf-viewer';
 import { ReaderContext } from './reader-context';
 import { useTheme } from '../../lib/theme';
@@ -23,28 +25,59 @@ interface Runtime {
   nextId: number;
   scroll: ReturnType<ScrollPlugin['provides']>;
   layouts: Set<string>;
+  viewport: ReturnType<ViewportPlugin['provides']>;
 }
 export default function PdfViewer({
   blob,
   onReady,
   visible = true,
   pageRequest,
+  onRetry,
+  recovery,
+  loading = <PdfLoading />,
+  onError,
 }: {
-  blob: Blob;
+  blob: Blob | null;
   onReady: () => void;
   visible?: boolean;
   pageRequest?: { page: number; nonce: number } | null | undefined;
+  onRetry?: () => void;
+  recovery?: ReactNode;
+  loading?: ReactNode;
+  onError?: () => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const viewer = useRef<EmbedPdfContainer | null>(null);
   const runtime = useRef<Promise<Runtime> | null>(null);
   const ready = useRef(onReady);
+  const failed = useRef(onError);
   const active = useRef<Blob | null>(null);
   const notify = useRef<(() => void) | null>(null);
   const [error, setError] = useState('');
+  const [paintedBlob, setPaintedBlob] = useState<Blob | null>(null);
   const { theme } = useTheme();
   const reader = useContext(ReaderContext);
   const bindSearch = reader?.bindSearch;
+  const reportScroll = useRef(reader?.onScroll);
+  useEffect(() => {
+    reportScroll.current = reader?.onScroll;
+  }, [reader?.onScroll]);
+  const scrollFrame = useRef<number | null>(null),
+    scrollMetrics = useRef<{ top: number; remaining: number } | null>(null);
+  const emitScroll = useCallback((metrics: { top: number; remaining: number }) => {
+    scrollMetrics.current = metrics;
+    if (scrollFrame.current !== null) return;
+    scrollFrame.current = requestAnimationFrame(() => {
+      scrollFrame.current = null;
+      if (scrollMetrics.current) reportScroll.current?.(scrollMetrics.current);
+    });
+  }, []);
+  useEffect(
+    () => () => {
+      if (scrollFrame.current !== null) cancelAnimationFrame(scrollFrame.current);
+    },
+    [],
+  );
   const shown = visible && reader?.pdfVisible !== false;
   const desiredPage = useRef(pageRequest);
   const jump = useRef<(() => void) | null>(null);
@@ -57,7 +90,11 @@ export default function PdfViewer({
   }, [pageRequest]);
   useEffect(() => {
     ready.current = onReady;
-  }, [onReady]);
+    failed.current = onError;
+  }, [onReady, onError]);
+  useEffect(() => {
+    if (error) failed.current?.();
+  }, [error]);
   useEffect(() => {
     viewer.current?.setTheme(theme);
   }, [theme]);
@@ -90,8 +127,16 @@ export default function PdfViewer({
           defaultFont: [
             { url: `${ROOT}/fonts/NotoSans-Regular.ttf`, weight: 400 },
             { url: `${ROOT}/fonts/NotoSans-Bold.ttf`, weight: 700 },
-            { url: `${ROOT}/fonts/NotoSans-Italic.ttf`, weight: 400, italic: true },
-            { url: `${ROOT}/fonts/NotoSans-BoldItalic.ttf`, weight: 700, italic: true },
+            {
+              url: `${ROOT}/fonts/NotoSans-Italic.ttf`,
+              weight: 400,
+              italic: true,
+            },
+            {
+              url: `${ROOT}/fonts/NotoSans-BoldItalic.ttf`,
+              weight: 700,
+              italic: true,
+            },
           ],
         },
         disabledCategories: [
@@ -122,10 +167,19 @@ export default function PdfViewer({
           },
         },
         documentManager: { maxDocuments: 4 },
-        zoom: { defaultZoomLevel: 'fit-width' as ZoomMode, minZoom: 0.25, maxZoom: 4 },
+        zoom: {
+          defaultZoomLevel: 'fit-width' as ZoomMode,
+          // Large-format posters need scales below 25% to fit narrow viewports.
+          minZoom: 0.01,
+          maxZoom: 4,
+        },
       };
 
-      instance = EmbedPDF.init({ type: 'container', target: host.current, ...config });
+      instance = EmbedPDF.init({
+        type: 'container',
+        target: host.current,
+        ...config,
+      });
       if (!instance) throw new Error('viewer_init');
       viewer.current = instance;
       const registry = await instance.registry;
@@ -148,10 +202,12 @@ export default function PdfViewer({
       });
       const documents = registry.getPlugin<DocumentManagerPlugin>('document-manager')!.provides();
       const scroll = registry.getPlugin<ScrollPlugin>('scroll')!.provides();
+      const viewport = registry.getPlugin<ViewportPlugin>('viewport')!.provides();
       const state: Runtime = {
         documents,
         ui,
         scroll,
+        viewport,
         layouts: new Set(),
         loaded: new Map(),
         painted: new Set(),
@@ -169,6 +225,25 @@ export default function PdfViewer({
             setCurrentPage(pageNumber);
             if (desiredPage.current) setReferencePage(pageNumber);
           }
+        }),
+      );
+      cleanups.push(
+        viewport.onViewportChange(({ documentId, metrics }) => {
+          if (
+            active.current &&
+            state.loaded.get(active.current)?.id === documentId &&
+            state.layouts.has(documentId) &&
+            state.painted.has(documentId) &&
+            metrics.clientHeight > 0 &&
+            metrics.scrollHeight > 0
+          )
+            emitScroll({
+              top: metrics.scrollTop,
+              remaining: Math.max(
+                0,
+                metrics.scrollHeight - metrics.clientHeight - metrics.scrollTop,
+              ),
+            });
         }),
       );
       const tiling = registry.getPlugin<TilingPlugin>('tiling')!.provides();
@@ -200,9 +275,9 @@ export default function PdfViewer({
       viewer.current = null;
       runtime.current = null;
     };
-  }, [bindSearch]);
+  }, [bindSearch, emitScroll]);
   useEffect(() => {
-    if (!shown) {
+    if (!shown || !blob) {
       bindSearch?.(null);
       return;
     }
@@ -251,6 +326,13 @@ export default function PdfViewer({
           if (closed || notified || !state.painted.has(id)) return;
           notified = true;
           clearTimeout(timer);
+          setPaintedBlob(blob);
+          const m = state.viewport.forDocument(id).getMetrics();
+          if (m.clientHeight > 0 && m.scrollHeight > 0)
+            emitScroll({
+              top: m.scrollTop,
+              remaining: Math.max(0, m.scrollHeight - m.clientHeight - m.scrollTop),
+            });
           ready.current();
         };
         jump.current = () => {
@@ -291,15 +373,29 @@ export default function PdfViewer({
       jump.current = null;
       bindSearch?.(null);
     };
-  }, [blob, bindSearch, shown]);
+  }, [blob, bindSearch, shown, emitScroll]);
   return (
-    <section aria-label="PDFビューア" className={styles.viewerContainer} data-pdf-page={currentPage}>
+    <section
+      aria-label="PDFビューア"
+      className={styles.viewerContainer}
+      data-pdf-page={currentPage}
+      data-pdf-ready={!!blob && paintedBlob === blob && !error}
+    >
       {shown && pageRequest && referencePage !== null && !error && (
-        <p className={styles.referencePage} role="status">参照先 · {pageRequest.page}ページ</p>
+        <p className={styles.referencePage} role="status">
+          参照先 · {pageRequest.page}ページ
+        </p>
       )}
+      {shown && !error && paintedBlob !== blob && loading}
       {error && (
         <div role="alert" className="empty-state">
           <p>{error}</p>
+          {onRetry && (
+            <button className="button secondary" onClick={onRetry}>
+              表示をやり直す
+            </button>
+          )}
+          {recovery}
         </div>
       )}
       <div

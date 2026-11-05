@@ -1,7 +1,9 @@
+import { StartupScreen } from '../../components/StartupScreen';
 import { validEnterYear } from '../../contracts/access.generated';
 import { DisplayProvider } from './DisplayProvider';
 import type { ReceiptDto } from '../../contracts/library.generated';
 import { operation } from '../library/client';
+import { forgetNoticeState } from '../notifications/local-state';
 import {
   forgetOtherUser,
   activateCache,
@@ -45,7 +47,8 @@ function message(error: unknown): string {
 }
 export function AuthProvider({ children }: { children: ReactNode }) {
   const query = useQueryClient();
-  const [ready, setReady] = useState(!authConfigured),
+  const [restoring, setRestoring] = useState(authConfigured),
+    [ready, setReady] = useState(!authConfigured),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [session, setSession] = useState<Session | null>(null),
@@ -55,6 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [cacheSession, setCacheSession] = useState<CacheSession | null>(null);
   const runtime = useRef<Awaited<ReturnType<typeof initializeAuth>> | null>(null),
     generation = useRef(0),
+    validation = useRef(0),
+    confirmedAccess = useRef<{
+      session: Session;
+      cache: CacheSession | null;
+      offline: boolean;
+    } | null>(null),
     deleting = useRef(false),
     deletionIntent = useRef<ReturnType<typeof operation> | null>(null);
   const checkRef = useRef<() => Promise<void>>(async () => {});
@@ -69,21 +78,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setReady(true);
         const check = async () => {
           if (deleting.current) return;
-          const ticket = ++generation.current;
-          setSession(null);
-          setCacheSession(null);
-          setOffline(false);
-          query.clear();
+          const ticket = ++validation.current;
           const user = value.auth.currentUser;
-          setProfile(user ? { displayName: user.displayName, photoURL: user.photoURL } : null);
+          const previous = confirmedAccess.current;
+          const preserve = !!previous && previous.session.uid === user?.uid && navigator.onLine;
+          const current = () =>
+            !disposed && validation.current === ticket && value.auth.currentUser?.uid === user?.uid;
+          const clearAccess = () => {
+            generation.current++;
+            confirmedAccess.current = null;
+            setSession(null);
+            setCacheSession(null);
+            setOffline(false);
+            query.clear();
+          };
+          if (!preserve) clearAccess();
+          setProfile(
+            user
+              ? { displayName: user.displayName, photoURL: user.photoURL, email: user.email }
+              : null,
+          );
           setSignedIn(!!user);
           if (!user) {
             await revokeCache().catch(() => {});
-            setBusy(false);
+            if (current()) {
+              setBusy(false);
+              setRestoring(false);
+            }
             return;
           }
           setError('');
-          setBusy(true);
+          // A refresh for the same identity does not unmount a reader/search in progress.
+          setBusy(!preserve);
           try {
             await forgetOtherUser(user.uid).catch(() => {});
             if (!navigator.onLine) {
@@ -92,8 +118,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 google && user.emailVerified && user.email?.endsWith('@kenryo.ed.jp')
                   ? await resumeCache(user.uid)
                   : null;
-              if (!disposed && generation.current === ticket) {
+              if (current()) {
                 if (saved) {
+                  confirmedAccess.current = {
+                    session: saved.session,
+                    cache: saved.cacheSession,
+                    offline: true,
+                  };
                   setSession(saved.session);
                   setCacheSession(saved.cacheSession);
                   setOffline(true);
@@ -128,34 +159,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               ('enterYear' in data && (data.role !== 'student' || !validEnterYear(data.enterYear)))
             )
               throw new Error('invalid_session');
-            if (
-              !disposed &&
-              generation.current === ticket &&
-              value.auth.currentUser?.uid === user.uid
-            ) {
-              const waiting = (data as Session).role === 'unassigned';
-              if (waiting) await revokeCache().catch(() => {});
-              const cache = waiting ? null : await activateCache(user.uid).catch(() => null);
-              if (
-                !disposed &&
-                generation.current === ticket &&
-                value.auth.currentUser?.uid === user.uid
-              ) {
-                setSession(data as Session);
-                setCacheSession(cache);
-                setOffline(false);
-              }
+            if (!current()) return;
+            const next = data as Session;
+            const sameScope =
+              previous?.session.uid === next.uid &&
+              previous.session.role === next.role &&
+              previous.session.enterYear === next.enterYear &&
+              previous.session.registration === next.registration;
+            if (preserve && !sameScope) {
+              clearAccess();
+              await revokeCache().catch(() => {});
+              if (!current()) return;
+            }
+            const waiting = next.role === 'unassigned';
+            if (waiting) await revokeCache().catch(() => {});
+            const reusable =
+              sameScope &&
+              previous?.cache &&
+              (await cacheIsCurrent(previous.cache).catch(() => false));
+            if (!current()) return;
+            const cache = waiting
+              ? null
+              : reusable
+                ? previous!.cache
+                : await activateCache(user.uid).catch(() => null);
+            if (current()) {
+              const established = sameScope ? previous!.session : next;
+              confirmedAccess.current = { session: established, cache, offline: false };
+              setSession(established);
+              setCacheSession(cache);
+              setOffline(false);
             }
           } catch (caught) {
-            if (!disposed && generation.current === ticket) {
+            if (current()) {
               setError(message(caught));
-              if (caught instanceof ApiError && [401, 403].includes(caught.status))
-                await revokeCache().catch(() => {});
+              if (!preserve || (caught instanceof ApiError && [401, 403].includes(caught.status))) {
+                clearAccess();
+                if (caught instanceof ApiError && [401, 403].includes(caught.status))
+                  await revokeCache().catch(() => {});
+              }
               if (caught instanceof ApiError && caught.status === 401)
                 await value.sdk.signOut(value.auth);
             }
           } finally {
-            if (!disposed && generation.current === ticket) setBusy(false);
+            if (current()) {
+              setBusy(false);
+              setRestoring(false);
+            }
           }
         };
         checkRef.current = check;
@@ -167,6 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!disposed) {
           setError('ログイン機能を読み込めませんでした。画面を再読み込みしてください。');
           setReady(false);
+          setRestoring(false);
         }
       });
     const changed = () => {
@@ -204,7 +255,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .catch(() => {});
     }
 
+    validation.current++;
     generation.current++;
+    confirmedAccess.current = null;
     setSession(null);
     setProfile(null);
     setCacheSession(null);
@@ -262,6 +315,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         /* Receipt display is optional; deletion remains durable. */
       }
+      await forgetNoticeState(user.uid).catch(() => {});
       await logout();
     } finally {
       deleting.current = false;
@@ -293,7 +347,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         caught instanceof ApiError &&
         (caught.status === 401 || caught.status === 403)
       ) {
+        validation.current++;
         generation.current++;
+        confirmedAccess.current = null;
         setSession(null);
         setCacheSession(null);
         setOffline(false);
@@ -319,11 +375,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const cleanup = () => {
       void sweepExpired().catch(() => {});
     };
+    let active = true;
     const check = () => {
+      const ticket = generation.current;
       if (cacheSession)
         void (offline ? resumeCache(cacheSession.uid).then(Boolean) : cacheIsCurrent(cacheSession))
           .then((ok) => {
-            if (!ok) {
+            if (
+              !ok &&
+              active &&
+              generation.current === ticket &&
+              confirmedAccess.current?.cache === cacheSession
+            ) {
+              validation.current++;
+              confirmedAccess.current = null;
               generation.current++;
               setSession(null);
               setCacheSession(null);
@@ -342,6 +407,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener('focus', cleanup);
     document.addEventListener('visibilitychange', cleanup);
     return () => {
+      active = false;
       unsubscribe();
       clearInterval(timer);
       window.removeEventListener('focus', cleanup);
@@ -366,13 +432,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         deleteAccount,
         retry: async () => {
-          await runtime.current?.auth.currentUser?.getIdToken(true);
           await checkRef.current();
         },
       }}
     >
       <DisplayProvider key={`${session?.uid ?? 'signed-out'}:${session?.role ?? 'none'}`}>
-        {children}
+        {restoring ? <StartupScreen /> : children}
       </DisplayProvider>
     </AuthContext.Provider>
   );

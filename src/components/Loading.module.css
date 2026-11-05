@@ -1,0 +1,108 @@
+.indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  width: 100%;
+  color: var(--accent);
+}
+.inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  color: inherit;
+}
+.spinner {
+  display: block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--line);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.inline .spinner {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+.skeletons {
+  padding-block: 12px;
+}
+.card,
+.lines {
+  min-width: 0;
+}
+.card {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 16px;
+  min-height: 134px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.bone {
+  height: 14px;
+  border-radius: 5px;
+  background: var(--line);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.cover {
+  height: 100px;
+  border-radius: 7px;
+  margin: 0;
+}
+.lines {
+  display: grid;
+  gap: 12px;
+}
+.short {
+  width: 40%;
+  height: 10px;
+}
+.medium {
+  width: 70%;
+}
+.row {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (max-width: 767px) {
+  .card {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 10px;
+    min-height: 82px;
+    padding: 10px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+  }
+  .cover {
+    height: 60px;
+    margin: 0;
+    border-radius: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  .bone {
+    animation: none;
+  }
+}

@@ -1,3 +1,4 @@
+import type { EmbedPdfContainer, ZoomPlugin, ViewportPlugin } from '@embedpdf/react-pdf-viewer';
 import { test, expect, type Page } from '@playwright/test';
 import { fixturePdf } from './pdf-fixture.mjs';
 import { createHash } from 'node:crypto';
@@ -14,6 +15,7 @@ async function setup(
     strict?: boolean;
     kinds?: string[];
     from?: string;
+    pdfGate?: Promise<void>;
   } = {},
 ) {
   const bytes = options.bytes ?? fixturePdf();
@@ -25,6 +27,8 @@ async function setup(
       url = new URL(request.url());
     expect(request.headers().authorization).toBe('Bearer fixture-token');
     calls.push(`${request.method()} ${url.pathname}`);
+    if (url.pathname === '/api/reading-tips')
+      return route.fulfill({ json: { version: '1', revision: 1, tips: ['架空の探究ヒント'] } });
     if (url.pathname === '/api/history') return route.fulfill({ json: { version: '1', ok: true } });
     if (url.pathname === '/api/works/24000010/state')
       return route.fulfill({ json: { version: '1', favorite: false, revision: 0, count: 0 } });
@@ -41,8 +45,8 @@ async function setup(
             enterYear: 2024,
             course: 'tankyu',
             eventName: 'individualTankyu',
-            category1: 'society',
-            subCategory1: 'disasterPrevention',
+            category1: 'community',
+            subCategory1: 'community-02',
             category2: 'none',
             subCategory2: 'none',
             existsPoster: kinds.includes('poster'),
@@ -66,6 +70,7 @@ async function setup(
         headers: { 'Content-Type': 'application/json' },
         body: '',
       });
+    await options.pdfGate;
     return route.fulfill({
       status: 200,
       headers: {
@@ -458,9 +463,9 @@ test('スマホはタイトル・丸い切替・折りたたみ詳細・大き�
   await page.setViewportSize({ width: 390, height: 844 });
   await setup(page);
   await expectPixels(page);
-  const details = page.getByRole('region', { name: '作品の詳細' });
+  const details = page.getByRole('region', { name: '作品の補足', exact: true });
   await expect(details).not.toBeVisible();
-  await expect(page.locator('.site-header')).not.toContainText('架空のPDF作品');
+  await expect(page.locator('.work-toolbar-title')).toHaveAttribute('aria-hidden', 'true');
   await expect(
     page.locator('.site-header').getByRole('button', { name: 'その他', exact: true }),
   ).toBeVisible();
@@ -476,12 +481,13 @@ test('スマホはタイトル・丸い切替・折りたたみ詳細・大き�
   expect((await viewer.boundingBox())!.width).toBeGreaterThanOrEqual(386);
   await page.getByRole('button', { name: '作品の詳細を見る' }).click();
   await expect(details).toBeVisible();
+  await details.getByRole('tab', { name: '情報', exact: true }).click();
   await expect(details).toContainText('架空班');
   await expect(details).toContainText('2024年度');
   await expect(details).toContainText('探究科');
   await expect(details).toContainText('防災');
-  await expect(details).toContainText('カテゴリ2');
-  await page.getByRole('button', { name: '作品の詳細を閉じる' }).click();
+  await expect(details).not.toContainText('カテゴリ2');
+  await page.getByRole('button', { name: 'シートを閉じる' }).click();
   await page.screenshot({ path: testInfo.outputPath('mobile-reader.png'), fullPage: true });
   await viewer.click({ position: { x: 30, y: 30 } });
   await expect(page.getByRole('button', { name: 'PDF内を検索', exact: true })).toHaveCount(0);
@@ -505,7 +511,7 @@ test('全画面は資料切替と検索だけのヘッダー、解除は右下�
   await page.getByRole('button', { name: '全画面表示', exact: true }).click();
   await expect(page.locator('[data-reader-fullscreen="true"]')).toBeVisible();
   await expect(page.getByRole('heading', { level: 1 })).not.toBeVisible();
-  await expect(page.getByRole('button', { name: '作品の詳細を見る' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '作品の詳細を見る' })).not.toBeVisible();
   await expect(page.getByRole('button', { name: 'ポスター', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'レポート', exact: true }).click();
   await expectPixels(page);
@@ -542,18 +548,18 @@ test('PCは作品情報を左・PDFを右に配置し、全画面の解除で情
   await page.setViewportSize({ width: 1440, height: 1000 });
   await setup(page);
   await expectPixels(page);
-  const info = page.getByRole('region', { name: '作品の詳細', exact: true });
+  const info = page.getByRole('region', { name: '作品の情報', exact: true });
   await expect(info).toBeVisible();
   const ib = await info.boundingBox();
   const vb = await page.getByRole('region', { name: 'PDFビューア', exact: true }).boundingBox();
   expect(ib!.x + ib!.width).toBeLessThan(vb!.x);
-  expect(vb!.width).toBeGreaterThan(900);
+  expect(vb!.width).toBeGreaterThan(550);
   const title = await page.getByRole('heading', { level: 1 }).boundingBox();
   const tabs = await page.getByRole('group', { name: '資料の種類', exact: true }).boundingBox();
   const actions = await page.getByRole('button', { name: 'その他', exact: true }).boundingBox();
-  expect(tabs!.x + tabs!.width).toBeLessThan(vb!.x);
+  expect(Math.abs(tabs!.x - vb!.x)).toBeLessThan(2);
   expect(actions!.x + actions!.width).toBeLessThan(vb!.x);
-  expect(vb!.y).toBeLessThanOrEqual(title!.y + 2);
+  expect(vb!.y - title!.y).toBeLessThan(70);
   await expect(page.locator('.site-header').getByRole('searchbox')).toHaveValue('water');
   await expect(
     page.locator('.site-header').getByRole('button', { name: 'その他', exact: true }),
@@ -584,7 +590,7 @@ test('メモリ内のPDFも再認可が終わるまで隠し、拒否された�
   });
   await page.getByRole('button', { name: 'ポスター', exact: true }).click();
   await expect(page.getByRole('region', { name: 'PDFビューア', exact: true })).not.toBeVisible();
-  await expect(page.getByText('PDFを取得しています…', { exact: true })).toBeVisible();
+  await expect(page.getByRole('status', { name: 'PDFを読み込み中', exact: true })).toBeVisible();
   release();
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.locator('embedpdf-container')).toHaveCount(0);
@@ -632,7 +638,7 @@ test('PCの作品ヘッダーは探索のカテゴリを保ち、キーワード
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await setup(page, {
-    from: '/results?category=society&subcategory=disasterPrevention&sort=titleAsc',
+    from: '/results?category=community&subcategory=community-02&sort=titleAsc',
   });
   const header = page.locator('.site-header');
   await expect(header).toContainText('地域');
@@ -641,8 +647,8 @@ test('PCの作品ヘッダーは探索のカテゴリを保ち、キーワード
   await header.getByRole('button', { name: '検索する', exact: true }).click();
   await expect(page).toHaveURL(/\/results\?/);
   const query = new URL(page.url()).searchParams;
-  expect(query.get('category')).toBe('society');
-  expect(query.get('subcategory')).toBe('disasterPrevention');
+  expect(query.get('category')).toBe('community');
+  expect(query.get('subcategory')).toBe('community-02');
   expect(query.get('sort')).toBe('titleAsc');
   expect(query.get('q')).toBe('防災');
 });
@@ -667,6 +673,7 @@ test('PCは共有・ダウンロードを直接表示し、ネイティブ共有
       },
     });
   });
+  await page.clock.install();
   await page.setViewportSize({ width: 1440, height: 1000 });
   await setup(page);
   await page.getByRole('button', { name: '共有する…', exact: true }).click();
@@ -681,6 +688,14 @@ test('PCは共有・ダウンロードを直接表示し、ネイティブ共有
   expect(
     await page.evaluate(() => (window as unknown as { copiedWorkUrl: string }).copiedWorkUrl),
   ).toMatch(/\/works\/24000010\?kind=poster$/);
+  const copied = page.getByRole('status').filter({ hasText: '作品のリンクをコピーしました。' });
+  await page.clock.fastForward(1000);
+  await expect(copied).toBeVisible();
+  await page.getByRole('button', { name: '共有する…', exact: true }).click();
+  await page.clock.fastForward(1000);
+  await expect(copied).toBeVisible();
+  await page.clock.fastForward(900);
+  await expect(copied).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'PDFダウンロード', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'その他', exact: true }).click();
   await expect(page.getByRole('menuitem')).toHaveText(['作品情報を報告']);
@@ -758,4 +773,193 @@ test('初期表示とチップとダウンロード選択肢はポスター・�
     'aria-pressed',
     'true',
   );
+});
+
+for (const width of [320, 390]) {
+  test(`${width}px: 大判ポスターを25%未満まで縮小し、左右を欠けずに表示する`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 });
+    const pageWidth = 3370;
+    await setup(page, {
+      bytes: fixturePdf(false, [
+        [pageWidth, 2384],
+        [2384, pageWidth],
+      ]),
+      kinds: ['poster', 'report'],
+    });
+    await expectPixels(page);
+    const metrics = async () =>
+      page.locator('embedpdf-container').evaluate(async (element) => {
+        const registry = await (element as EmbedPdfContainer).registry;
+        return {
+          zoom: registry.getPlugin<ZoomPlugin>('zoom')!.provides().getState().currentZoomLevel,
+          viewport: registry.getPlugin<ViewportPlugin>('viewport')!.provides().getMetrics(),
+        };
+      });
+    await expect.poll(async () => (await metrics()).zoom, { timeout: 15000 }).toBeLessThan(0.25);
+    let state = await metrics();
+    expect(pageWidth * state.zoom).toBeLessThanOrEqual(state.viewport.clientWidth);
+    expect(state.viewport.scrollWidth).toBeLessThanOrEqual(state.viewport.clientWidth + 1);
+    await page.screenshot({
+      path: testInfo.outputPath('large-poster.png'),
+      animations: 'disabled',
+    });
+    await page.setViewportSize({ width: 740, height: 390 });
+    await expect
+      .poll(async () => {
+        const state = await metrics();
+        return state.viewport.scrollWidth - state.viewport.clientWidth;
+      })
+      .toBeLessThanOrEqual(1);
+    await page.setViewportSize({ width, height: 844 });
+    await page.getByRole('button', { name: 'レポート', exact: true }).click();
+    await expectPixels(page);
+    // A newly activated document briefly starts at 100% before its fit-width layout settles.
+    await expect
+      .poll(
+        async () => {
+          const state = await metrics();
+          return pageWidth * state.zoom - state.viewport.clientWidth;
+        },
+        { timeout: 15000 },
+      )
+      .toBeLessThanOrEqual(0);
+    state = await metrics();
+    expect(state.viewport.scrollWidth).toBeLessThanOrEqual(state.viewport.clientWidth + 1);
+  });
+}
+
+test('PDF取得とビューア準備を同じ中央ローディングでつなぎ、ヒントを保ったまま描画完了で消す', async ({
+  page,
+}) => {
+  let releasePdf!: () => void, releaseViewer!: () => void;
+  const pdfGate = new Promise<void>((resolve) => {
+    releasePdf = resolve;
+  });
+  const viewerGate = new Promise<void>((resolve) => {
+    releaseViewer = resolve;
+  });
+  await page.route('**/src/features/works/PdfViewer.tsx', async (route) => {
+    await viewerGate;
+    await route.continue();
+  });
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'archive-reading-tips-v1',
+      JSON.stringify({ version: '1', revision: 2, tips: ['問いを小さくしてみよう。'] }),
+    );
+    localStorage.setItem('archive-reading-tips-checked-v1', String(Date.now()));
+  });
+  const calls = await setup(page, { pdfGate });
+  const loader = page.getByRole('status', { name: 'PDFを読み込み中', exact: true });
+  await expect(loader).toBeVisible();
+  await expect(loader).toHaveCount(1);
+  await expect(loader).toContainText('問いを小さくしてみよう。');
+  await loader.evaluate((el) => {
+    el.setAttribute('data-continuity', 'same-loader');
+  });
+  const frame = page.locator('[data-reader-surface]');
+  const [a, b] = await Promise.all([loader.boundingBox(), frame.boundingBox()]);
+  expect(a).toBeTruthy();
+  expect(b).toBeTruthy();
+  expect(Math.abs(a!.x + a!.width / 2 - (b!.x + b!.width / 2))).toBeLessThan(2);
+  await page.screenshot({ path: test.info().outputPath('pdf-loading.png'), fullPage: true });
+  releasePdf();
+  await expect.poll(() => calls.filter((call) => call.includes('/pdf/poster')).length).toBe(1);
+  await expect(loader).toHaveAttribute('data-continuity', 'same-loader');
+  releaseViewer();
+  await expect(page.locator('[data-pdf-ready="true"]')).toBeVisible({ timeout: 30000 });
+  await expect(loader).toHaveCount(0);
+  expect(calls.filter((call) => call.includes('/reading-tips'))).toHaveLength(0);
+});
+
+for (const strict of [false, true]) {
+  test(`PDFの受信を待たずにエンジンを起動し、同じエンジンで描画する（StrictMode=${strict}）`, async ({
+    page,
+  }) => {
+    let releasePdf!: () => void;
+    const pdfGate = new Promise<void>((resolve) => {
+      releasePdf = resolve;
+    });
+    await page.addInitScript(() => {
+      Object.assign(window, { parallelPdfWorkers: 0 });
+      const NativeWorker = window.Worker;
+      window.Worker = class extends NativeWorker {
+        constructor(url: string | URL, options?: WorkerOptions) {
+          super(url, options);
+          (window as unknown as { parallelPdfWorkers: number }).parallelPdfWorkers++;
+        }
+      };
+    });
+    const wasm = page.waitForResponse((response) =>
+      new URL(response.url()).pathname.endsWith('/pdfium.wasm'),
+    );
+    const calls = await setup(page, { pdfGate, strict });
+    const loader = page.getByRole('status', { name: 'PDFを読み込み中', exact: true });
+    await expect(loader).toBeVisible();
+    await loader.evaluate((element) => element.setAttribute('data-continuity', 'parallel'));
+    await expect(page.locator('embedpdf-container')).toHaveCount(1);
+    await page.locator('embedpdf-container').evaluate(async (element) => {
+      await (element as EmbedPdfContainer).registry;
+    });
+    await (await wasm).finished();
+    const workersBefore = await page.evaluate(
+      () => (window as unknown as { parallelPdfWorkers: number }).parallelPdfWorkers,
+    );
+    expect(workersBefore).toBeGreaterThan(0);
+    await expect(page.locator('[data-pdf-ready="true"]')).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'PDFビューア', exact: true })).not.toBeVisible();
+    await expect(loader).toHaveAttribute('data-continuity', 'parallel');
+    releasePdf();
+    await expect(page.locator('[data-pdf-ready="true"]')).toBeVisible({ timeout: 30000 });
+    await expect(loader).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { parallelPdfWorkers: number }).parallelPdfWorkers,
+      ),
+    ).toBe(workersBefore);
+    expect(calls.filter((call) => call === 'GET /api/works/24000010/pdf/poster')).toHaveLength(1);
+  });
+}
+
+test('PDF受信前に戻っても先に準備したエンジンを解放する', async ({ page }) => {
+  let releasePdf!: () => void;
+  const pdfGate = new Promise<void>((resolve) => {
+    releasePdf = resolve;
+  });
+  await page.addInitScript(() => {
+    Object.assign(window, { parallelActiveWorkers: 0 });
+    const NativeWorker = window.Worker;
+    window.Worker = class extends NativeWorker {
+      constructor(url: string | URL, options?: WorkerOptions) {
+        super(url, options);
+        (window as unknown as { parallelActiveWorkers: number }).parallelActiveWorkers++;
+      }
+      override terminate() {
+        (window as unknown as { parallelActiveWorkers: number }).parallelActiveWorkers--;
+        super.terminate();
+      }
+    };
+  });
+  await setup(page, { pdfGate });
+  await expect(page.locator('embedpdf-container')).toHaveCount(1);
+  await page.locator('embedpdf-container').evaluate(async (element) => {
+    await (element as EmbedPdfContainer).registry;
+  });
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { parallelActiveWorkers: number }).parallelActiveWorkers,
+    ),
+  ).toBeGreaterThan(0);
+  await page.getByRole('link', { name: '一覧へ戻る', exact: true }).click();
+  releasePdf();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as unknown as { parallelActiveWorkers: number }).parallelActiveWorkers,
+      ),
+    )
+    .toBe(0);
+  await expect(page.locator('embedpdf-container')).toHaveCount(0);
 });

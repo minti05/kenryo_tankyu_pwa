@@ -22,3 +22,10 @@ test-results-offline/
 test-results-library/
 test-results-discovery/
 *.tsbuildinfo
+
+test-results-install/
+
+test-results-collections/
+
+# Browser traces, screenshots and run metadata are local verification outputs.
+/test-results*/

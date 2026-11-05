@@ -1,3 +1,4 @@
+import { LoadingIndicator } from '../../components/Loading';
 import '../auth/settings.css';
 import { Bell } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -121,11 +122,13 @@ export function PushSettings({ compact = false }: { compact?: boolean }) {
           <div className="setting-copy">
             <span>通知</span>
             <small>
-              {checking
-                ? '確認中…'
-                : binding?.active
-                  ? 'この端末への通知：オン'
-                  : 'この端末への通知：オフ'}
+              {checking ? (
+                <LoadingIndicator inline label="通知設定を確認中" />
+              ) : binding?.active ? (
+                'この端末への通知：オン'
+              ) : (
+                'この端末への通知：オフ'
+              )}
             </small>
           </div>
           <button
@@ -171,7 +174,7 @@ export function PushSettings({ compact = false }: { compact?: boolean }) {
   return (
     <section className="notification-settings" aria-label="端末への通知">
       <h2>この端末で通知を受け取る</h2>
-      <p>{cap ? guide[cap] : '通知への対応を確認しています…'}</p>
+      <p>{cap ? guide[cap] : <LoadingIndicator inline label="通知への対応を確認中" />}</p>
       {permission === 'denied' && (
         <p>ブラウザ設定で通知が拒否されています。設定から許可すると再登録できます。</p>
       )}

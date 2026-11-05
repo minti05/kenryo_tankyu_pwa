@@ -7,9 +7,8 @@ test('公開設定が揃うと公式SDKを読み込みGoogle専用ボタンが�
     if (new URL(request.url()).pathname.startsWith('/api/')) sent.push(request.url());
   });
   await page.goto('/welcome');
-  await expect(
-    page.getByRole('button', { name: '学校のGoogleアカウントでログイン' }),
-  ).toBeEnabled();
-  await expect(page.getByText('学校のGoogleアカウントでログインできます。')).toBeVisible();
+  await expect(page.getByRole('button', { name: '探究アーカイブをはじめる' })).toBeEnabled();
+  await page.getByRole('button', { name: '探究アーカイブをはじめる' }).click();
+  await expect(page.getByRole('button', { name: 'ブラウザでログイン' })).toBeEnabled();
   expect(sent).toEqual([]);
 });

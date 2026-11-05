@@ -3,7 +3,14 @@ import { SlidersHorizontal, X, RotateCcw, ArrowRight } from 'lucide-react';
 import { CATEGORY_CATALOG } from '../../contracts/catalog.generated';
 import './results.css';
 
-import { COURSES, EVENTS, KINDS, AWARDS, conditionLabels } from './filter-options';
+import {
+  COURSES,
+  EVENTS,
+  KINDS,
+  AWARDS,
+  conditionLabels,
+  hasSearchConditions,
+} from './filter-options';
 export function SearchFilters({
   params,
   awards,
@@ -117,6 +124,7 @@ export function SearchFilters({
               if (value) next.set(key, value);
               else next.delete(key);
             }
+            if (!hasSearchConditions(next, awards)) return;
             onApply(next);
             setOpen(false);
           }}
@@ -196,7 +204,11 @@ export function SearchFilters({
               <RotateCcw size={16} />
               条件をクリア
             </button>
-            <button type="submit" className="button primary">
+            <button
+              type="submit"
+              className="button primary"
+              disabled={!hasSearchConditions(draft, awards)}
+            >
               この条件で検索
               <ArrowRight size={18} />
             </button>

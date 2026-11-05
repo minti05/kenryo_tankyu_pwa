@@ -1,11 +1,21 @@
+import { LoadingSkeleton } from '../../components/Loading';
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Bell, X } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../auth/context';
+import { noticeIsRead } from './local-state';
+import { useLocalNoticeState, useNoticeInbox } from './queries';
 const NotificationsPanel = lazy(() =>
   import('./NotificationsPage').then((m) => ({ default: m.NotificationsPanel })),
 );
 import './notifications.css';
 export function NotificationMenu() {
+  const { session, offline } = useAuth(),
+    client = useQueryClient();
+  useNoticeInbox();
+  const local = useLocalNoticeState();
+  const hasUnread = local.data?.items.some((n) => !noticeIsRead(local.data, n));
   const [params, setParams] = useSearchParams(),
     [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null),
@@ -16,6 +26,13 @@ export function NotificationMenu() {
   const initialNotice = notice && /^[A-Za-z0-9_-]{1,128}$/.test(notice) ? notice : null;
   const requested = !!initialNotice || params.get('notices') === '1',
     visible = open || requested;
+  useEffect(() => {
+    if (visible && !offline)
+      void client.invalidateQueries(
+        { queryKey: ['notifications', 'inbox', session?.uid] },
+        { cancelRefetch: false },
+      );
+  }, [visible, offline, session?.uid, client]);
   const close = useCallback(
     (restoreFocus = false) => {
       setOpen(false);
@@ -62,6 +79,13 @@ export function NotificationMenu() {
         onClick={() => (visible ? close() : setOpen(true))}
       >
         <Bell size={23} />
+        {session && hasUnread && (
+          <span
+            className="notification-badge"
+            role="status"
+            aria-label="未読のお知らせがあります"
+          />
+        )}
       </button>
       {visible && (
         <div className="notification-popover" role="dialog" aria-label="お知らせ" id={id}>
@@ -76,13 +100,7 @@ export function NotificationMenu() {
               <X size={21} />
             </button>
           </div>
-          <Suspense
-            fallback={
-              <p className="notice-empty" role="status">
-                お知らせを読み込んでいます…
-              </p>
-            }
-          >
+          <Suspense fallback={<LoadingSkeleton label="お知らせを読み込み中" />}>
             <NotificationsPanel
               key={initialNotice}
               initialNotice={initialNotice}

@@ -20,78 +20,132 @@
     "sha256": "0de4360f72b5055923c41873fb08a866ed57a9ec26f71fae61c4ac2befd8e54b"
   },
   {
-    "file": "public/images/categories/art.png",
+    "file": "public/images/categories/art.svg",
     "source": "assets/images/categories/art.png",
-    "sha256": "61c71951a8d6f37df5e591196627bf7ffe2fe5b9b968d7629b87874f07c90131"
+    "sourceSha256": "61c71951a8d6f37df5e591196627bf7ffe2fe5b9b968d7629b87874f07c90131",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "43c9400242258fe184a3353c4a90c945bef738bc230033abf25fcb5cec84ec30"
   },
   {
-    "file": "public/images/categories/business.png",
+    "file": "public/images/categories/business.svg",
     "source": "assets/images/categories/business.png",
-    "sha256": "4be1cce2d4aa64589612f4fcb4cc5c59d0aca40380d039445d96850979985e85"
+    "sourceSha256": "4be1cce2d4aa64589612f4fcb4cc5c59d0aca40380d039445d96850979985e85",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "2b366004bef882e24e146a6afa706b6d33872fc0da52a8c4996141c8bcb86e09"
   },
   {
-    "file": "public/images/categories/education.png",
+    "file": "public/images/categories/education.svg",
     "source": "assets/images/categories/education.png",
-    "sha256": "2b87c65e594ffbe8561934671042ba35bb5775273d5716639989c2a29b22e463"
+    "sourceSha256": "2b87c65e594ffbe8561934671042ba35bb5775273d5716639989c2a29b22e463",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "c4cf2ddd71f3386d70ed02111081060dd4b25cede8d14349056b490ff37a7aa5"
   },
   {
-    "file": "public/images/categories/environment.png",
+    "file": "public/images/categories/environment.svg",
     "source": "assets/images/categories/environment.png",
-    "sha256": "a2e2d60d4ce548ceebb2505ba15b1377f50ddae12e8ebafb017114bbd36330aa"
+    "sourceSha256": "a2e2d60d4ce548ceebb2505ba15b1377f50ddae12e8ebafb017114bbd36330aa",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "aa8f1bf42c4d350c03ae6cf263b450a83f1aff2052abcdd96eb37870d75fdfa0"
   },
   {
-    "file": "public/images/categories/health.png",
+    "file": "public/images/categories/health.svg",
     "source": "assets/images/categories/health.png",
-    "sha256": "484a816ee42278b28d7682a4ed1084000a7d5ed574a0535533bfdd298070179b"
+    "sourceSha256": "484a816ee42278b28d7682a4ed1084000a7d5ed574a0535533bfdd298070179b",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "c7fae92447de4613ebbfa68327b74ef15898d76307ea91a7d5f4cf544747f333"
   },
   {
-    "file": "public/images/categories/history.png",
+    "file": "public/images/categories/history.svg",
     "source": "assets/images/categories/history.png",
-    "sha256": "ddec09a355753342e8f37566e136b25ea522ef51fa2218b3eb25588ca1a32deb"
+    "sourceSha256": "ddec09a355753342e8f37566e136b25ea522ef51fa2218b3eb25588ca1a32deb",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "0a0eefb55e8b5acd87d63659446f4b5bc1ba03bc27c45599fb0a03b52bfcdb2f"
   },
   {
-    "file": "public/images/categories/industry.png",
+    "file": "public/images/categories/industry.svg",
     "source": "assets/images/categories/industry.png",
-    "sha256": "1f03a079d18ae89d3f3fa53e78872444b76c6cc3617e234458da47c328a7dc41"
+    "sourceSha256": "1f03a079d18ae89d3f3fa53e78872444b76c6cc3617e234458da47c328a7dc41",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "4d88ea362ae734c058bbdd4964a483989c6f567f18ac675c7cc8e1cb688fb36d"
   },
   {
-    "file": "public/images/categories/international.png",
+    "file": "public/images/categories/international.svg",
     "source": "assets/images/categories/international.png",
-    "sha256": "5725e08b87adbeee9f54e090266efa771ddf105cff17fe638bb5a19cc4328063"
+    "sourceSha256": "5725e08b87adbeee9f54e090266efa771ddf105cff17fe638bb5a19cc4328063",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "904128f9bd04675183950ead11e233c927aa2aea48fdb2a449ea8d2b58e25462"
   },
   {
-    "file": "public/images/categories/life.png",
+    "file": "public/images/categories/life.svg",
     "source": "assets/images/categories/life.png",
-    "sha256": "f8bd9d1d916df887f5fee34a1d339c89c548cba34e4e1c6f12f0f89b6de31fa1"
+    "sourceSha256": "f8bd9d1d916df887f5fee34a1d339c89c548cba34e4e1c6f12f0f89b6de31fa1",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "a7fbfefc73bf03dd3a6b6104447b52a6e88e298d3489b62e8bfe5f5f5b48ddaf"
   },
   {
-    "file": "public/images/categories/other_for_dark.png",
+    "file": "public/images/categories/other_for_dark.svg",
     "source": "assets/images/categories/other_for_dark.png",
-    "sha256": "c7e6d3cdcfa24083fa852be446c97c5f03cfbc91b94d3783864acd608252cd68"
+    "sourceSha256": "c7e6d3cdcfa24083fa852be446c97c5f03cfbc91b94d3783864acd608252cd68",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "7ea015998743828230db167fc4f7e28d932aeefc1d1c95b84a156b2a7bb299ac"
   },
   {
-    "file": "public/images/categories/other_for_light.png",
+    "file": "public/images/categories/other_for_light.svg",
     "source": "assets/images/categories/other_for_light.png",
-    "sha256": "afc6173084d1ef68176e72923c9eeeb73f6983e271518393269874f24b96cb02"
+    "sourceSha256": "afc6173084d1ef68176e72923c9eeeb73f6983e271518393269874f24b96cb02",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "69ade899c6f98e060949acb5c73c8e2862dcc12c7156a8a8548d188885001d02"
   },
   {
-    "file": "public/images/categories/rights.png",
+    "file": "public/images/categories/rights.svg",
     "source": "assets/images/categories/rights.png",
-    "sha256": "742f982366ef20f57aea431d6f9fa1281ed23ac5438e7dff6139fe2d6c5b206b"
+    "sourceSha256": "742f982366ef20f57aea431d6f9fa1281ed23ac5438e7dff6139fe2d6c5b206b",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "aa2bfa71e29b57a7ff6387c94d98ff1edc5fc08417368836ad9ee9ceac60e01a"
   },
   {
-    "file": "public/images/categories/science.png",
+    "file": "public/images/categories/science.svg",
     "source": "assets/images/categories/science.png",
-    "sha256": "b692aaa9024f818d1845b358826525d8c91cf56134aa5ff8abba89d77654b7ad"
+    "sourceSha256": "b692aaa9024f818d1845b358826525d8c91cf56134aa5ff8abba89d77654b7ad",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "f968ddeca849e961da9a4354c769bf2f95fd226759f4aaf469b1c0da0c34d045"
   },
   {
-    "file": "public/images/categories/society.png",
+    "file": "public/images/categories/society.svg",
     "source": "assets/images/categories/society.png",
-    "sha256": "c09d5f4c4e1bef2571cef4216a4f9f03f58a4b6498b5e87b530214bce283b309"
+    "sourceSha256": "c09d5f4c4e1bef2571cef4216a4f9f03f58a4b6498b5e87b530214bce283b309",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "c7a6afdc923648481611c694714e7632bdce9315d998f257e84a7ba936b98c16"
   },
   {
-    "file": "public/images/categories/technology.png",
+    "file": "public/images/categories/technology.svg",
     "source": "assets/images/categories/technology.png",
-    "sha256": "05375c65e6892f5e50ad555b9953da83bd5ee5c0089b4ccb5513b8e71fb5b466"
+    "sourceSha256": "05375c65e6892f5e50ad555b9953da83bd5ee5c0089b4ccb5513b8e71fb5b466",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "b2d455b5a36524f626e9297b94ff2241f5405b40c54d592bf9523210698a0c2b"
+  },
+  {
+    "file": "public/images/categories/entertainment.svg",
+    "source": "../data/category-art-study/2026-10-29/original-png/entertainment.png",
+    "sourceSha256": "d0ed41a59a65b8c2215bcd456e2e2a1c99076316b3e5ae249eefdb4bd6846f6b",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "3f208ace90f2881bc0dbf99e745400b84684d5384c3394cd9cbd331d73267fc5"
+  },
+  {
+    "file": "public/images/categories/sports.svg",
+    "source": "../data/category-art-study/2026-10-29/original-png/sports.png",
+    "sourceSha256": "a3159d778bfd978c479ca9ecc4608529c9637d8f3d706723e031d501298619fc",
+    "transform": "monochrome alpha-contour SVG trace",
+    "sha256": "81dd9970b6dd5c9bcdd16f385ae4fb3ff6212611751198e4da93e734addd8439"
+  },
+  {
+    "file": "public/icons/loading.svg",
+    "source": "legacy_flutter/assets/images/app_icon_loading.svg",
+    "sha256": "d47a4457d6975823e61ad9e90e0cd801236693d7c82800d9a50086ab92da2077"
+  },
+  {
+    "file": "public/icons/loading-loop.svg",
+    "source": "legacy_flutter/assets/images/app_icon_loading_loop.svg",
+    "sha256": "a4298c0a350c93f34a9dfafa91f3510e0506106b2ad8c04db81bd78b498e541b"
   }
 ]

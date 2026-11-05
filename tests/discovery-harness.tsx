@@ -1,3 +1,6 @@
+import LegalPage from '../src/pages/LegalPage';
+import ContactPage from '../src/pages/ContactPage';
+import NaturalSearchPage from '../src/features/discovery/NaturalSearchPage';
 import AwardsPage from '../src/features/discovery/AwardsPage';
 import { DisplayProvider } from '../src/features/auth/DisplayProvider';
 import { StrictMode, Fragment } from 'react';
@@ -24,22 +27,30 @@ import '../src/styles/global.css';
 const entry = new URL(location.href).searchParams.get('entry') ?? '/explore';
 const TestMode = new URL(location.href).searchParams.get('strict') === '1' ? StrictMode : Fragment;
 const adminFixture = new URL(location.href).searchParams.get('role') === 'admin';
+const guestFixture = new URL(location.href).searchParams.get('guest') === '1';
 const auth: AuthState = {
-  profile: {
-    displayName: '架空の利用者',
-    photoURL: 'https://lh3.googleusercontent.com/fixture-avatar',
-  },
+  profile: guestFixture
+    ? null
+    : {
+        email: 'fixture.alice@kenryo.ed.jp',
+        displayName: '架空の利用者',
+        photoURL: 'https://lh3.googleusercontent.com/fixture-avatar',
+      },
   offline: false,
   cacheSession: null,
   ready: true,
-  configured: true,
+  configured: new URL(location.href).searchParams.get('unconfigured') !== '1',
   busy: false,
   error: '',
-  signedIn: true,
-  session: { version: '1', uid: 'fixture-alice', role: adminFixture ? 'admin' : 'student' },
+  signedIn: !guestFixture,
+  session: guestFixture
+    ? null
+    : { version: '1', uid: 'fixture-alice', role: adminFixture ? 'admin' : 'student' },
   requestResponse: createApiTransport(async () => 'fixture-token'),
   request: createApiClient(async () => 'fixture-token'),
-  login: () => {},
+  login: () => {
+    document.body.dataset.loginCount = String(Number(document.body.dataset.loginCount || 0) + 1);
+  },
   logout: async () => {},
   deleteAccount: async () => {},
   retry: async () => {},
@@ -55,6 +66,9 @@ createRoot(document.getElementById('root')!).render(
           <BrowserRouter>
             <Routes>
               <Route element={<Layout />}>
+                <Route path="privacy" element={<LegalPage kind="privacy" />} />
+                <Route path="terms" element={<LegalPage kind="terms" />} />
+                <Route path="contact" element={<ContactPage />} />
                 <Route
                   path="test-update"
                   element={
@@ -89,6 +103,14 @@ createRoot(document.getElementById('root')!).render(
                   element={
                     <SearchGate>
                       <ResultsPage />
+                    </SearchGate>
+                  }
+                />
+                <Route
+                  path="search/chat"
+                  element={
+                    <SearchGate>
+                      <NaturalSearchPage />
                     </SearchGate>
                   }
                 />

@@ -1,0 +1,196 @@
+.install-intro img {
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+.install-guide {
+  width: min(480px, calc(100vw - 32px));
+}
+.install-intro {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.install-intro p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+.install-steps {
+  padding-left: 24px;
+  margin: 24px 0 16px;
+  font-size: 0.875rem;
+}
+.install-steps li {
+  padding: 0 0 14px 6px;
+}
+.install-steps li::marker {
+  color: var(--accent);
+  font-weight: 700;
+}
+.install-steps svg {
+  display: inline-block;
+  vertical-align: middle;
+  color: var(--accent);
+}
+.install-note {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.8;
+}
+.install-primary {
+  width: 100%;
+  gap: 8px;
+  margin: 16px 0;
+}
+.install-later {
+  display: block;
+  margin: 12px auto 0;
+  font-size: 0.8125rem;
+}
+@media (max-width: 600px) {
+  .install-guide--iphone {
+    margin: auto auto calc(20px + env(safe-area-inset-bottom));
+    overflow: visible;
+  }
+  .install-guide--iphone .work-modal-heading {
+    border-radius: 20px 20px 0 0;
+  }
+  .install-guide--iphone .work-modal-body {
+    max-height: calc(85dvh - 100px);
+    overflow-y: auto;
+    border-radius: 0 0 20px 20px;
+  }
+  .install-guide--iphone::after {
+    content: '';
+    position: absolute;
+    bottom: -9px;
+    left: calc(50% - 8px);
+    width: 16px;
+    height: 16px;
+    background: var(--surface);
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    transform: rotate(45deg);
+  }
+  .install-guide--menu::after {
+    left: auto;
+    right: 20px;
+  }
+}
+
+.install-later {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  padding: 4px 0;
+}
+.install-launch-note,
+.install-complete {
+  margin: 20px 0;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.8125rem;
+  line-height: 1.8;
+}
+.install-complete {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.install-complete svg {
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.install-complete p {
+  margin: 0;
+}
+.install-choice {
+  width: min(480px, calc(100vw - 32px));
+}
+.install-choice-intro {
+  margin: 0 0 20px;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.install-choice-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 18px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.install-choice-option + .install-choice-option {
+  margin-top: 12px;
+}
+.install-choice-option > span {
+  flex: 1;
+}
+.install-choice-option strong,
+.install-choice-option small {
+  display: block;
+}
+.install-choice-option strong {
+  font-size: 0.9375rem;
+}
+.install-choice-option small {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.install-choice-option > svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.install-choice-option:first-of-type {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.install-choice-option:hover {
+  border-color: var(--accent);
+}
+.install-choice-option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (max-width: 600px) {
+  .install-choice {
+    margin: auto auto max(16px, env(safe-area-inset-bottom));
+  }
+}
+
+.install-steps:first-child {
+  margin-top: 0;
+}
+.install-help {
+  margin: 16px 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.8;
+}
+.install-help summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.install-help summary::before {
+  content: '+';
+  color: var(--accent);
+  font-size: 1rem;
+}
+.install-help[open] summary::before {
+  content: '−';
+}

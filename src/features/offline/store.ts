@@ -2,7 +2,7 @@ import { unsubscribeBrowserPush } from '../../lib/push-cleanup';
 import type { SearchWorkDto } from '../../contracts/discovery.generated';
 import type { Session } from '../auth/context';
 import type { PdfData } from '../works/pdf-data';
-export const TTL = 72 * 60 * 60 * 1000;
+export const TTL = 14 * 24 * 60 * 60 * 1000;
 export const LIMIT = 100 * 1024 * 1024;
 const DB = 'tankyu-offline-v1',
   FENCE = 'tankyu-offline-fence';

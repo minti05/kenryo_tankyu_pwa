@@ -1,3 +1,4 @@
+import { LoadingIndicator } from './Loading';
 import { useEffect, useRef, useState } from 'react';
 export function UpdateDialog({ onUpdate }: { onUpdate: () => Promise<void> }) {
   const dialog = useRef<HTMLDialogElement>(null),
@@ -21,12 +22,6 @@ export function UpdateDialog({ onUpdate }: { onUpdate: () => Promise<void> }) {
       className="version-dialog"
       aria-labelledby="version-title"
       onCancel={(event) => event.preventDefault()}
-      onKeyDown={(event) => {
-        if (event.key === 'Tab') {
-          event.preventDefault();
-          button.current?.focus();
-        }
-      }}
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) {
           event.preventDefault();
@@ -35,7 +30,14 @@ export function UpdateDialog({ onUpdate }: { onUpdate: () => Promise<void> }) {
       }}
     >
       <h2 id="version-title">新しいバージョンがあります</h2>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <>
+          <p role="alert">{error}</p>
+          <p>
+            <a href="/assets/recover.html">修復して開く</a>
+          </p>
+        </>
+      )}
       <button
         ref={button}
         className="button primary"
@@ -51,7 +53,7 @@ export function UpdateDialog({ onUpdate }: { onUpdate: () => Promise<void> }) {
           }
         }}
       >
-        {busy ? '更新しています…' : '更新する'}
+        {busy ? <LoadingIndicator inline label="更新中" /> : '更新する'}
       </button>
     </dialog>
   );

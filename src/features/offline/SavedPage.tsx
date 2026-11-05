@@ -1,137 +1,154 @@
 import { useEffect, useState } from 'react';
+import { ArrowLeft, Check, HardDrive, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Modal } from '../../components/Modal';
+import { LoadingIndicator } from '../../components/Loading';
+import { HistoryManagement } from '../library/HistoryManagement';
 import { useAuth } from '../auth/context';
-import { cacheTime, deleteSaved, listSaved, subscribeCache, LIMIT, type SavedPdf } from './store';
-import { DOCUMENT_LABELS } from '../discovery/search';
+import { deleteSaved, listSaved, subscribeCache } from './store';
+import styles from '../library/HistoryManagement.module.css';
+
 export default function SavedPage() {
-  const { cacheSession, offline } = useAuth(),
-    [rows, setRows] = useState<SavedPdf[]>([]),
-    [now, setNow] = useState(0),
-    [error, setError] = useState(''),
-    [from, setFrom] = useState(''),
-    [to, setTo] = useState('');
+  const { cacheSession } = useAuth();
+  const [cache, setCache] = useState<{ count: number; bytes: number } | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   useEffect(() => {
+    if (!cacheSession) return;
     let alive = true;
     const refresh = () => {
-      setNow(Date.now());
-      if (cacheSession)
-        void listSaved(cacheSession)
-          .then((value) => {
-            if (alive) {
-              setRows(value);
-              setNow(cacheTime());
-              setError('');
-            }
-          })
-          .catch(() => {
-            if (alive) {
-              setRows([]);
-              setError(
-                'この端末の保存を読み取れませんでした。オンラインの作品は引き続き閲覧できます。',
-              );
-            }
-          });
+      void listSaved(cacheSession)
+        .then((rows) => {
+          if (alive) {
+            setCache({ count: rows.length, bytes: rows.reduce((sum, row) => sum + row.bytes, 0) });
+            setError('');
+          }
+        })
+        .catch(() => {
+          if (alive) {
+            setCache(null);
+            setError('キャッシュを確認できません。');
+          }
+        });
     };
     refresh();
-    const unsubscribe = subscribeCache(refresh),
-      timer = setInterval(refresh, 30000);
+    const unsubscribe = subscribeCache(refresh);
+    const timer = setInterval(refresh, 30000);
     window.addEventListener('focus', refresh);
-    document.addEventListener('visibilitychange', refresh);
     return () => {
       alive = false;
       unsubscribe();
       clearInterval(timer);
       window.removeEventListener('focus', refresh);
-      document.removeEventListener('visibilitychange', refresh);
     };
   }, [cacheSession]);
-  async function remove(id?: string, kind?: string, range?: { from: number; to: number }) {
-    if (!cacheSession) return;
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(''), 2000);
+    return () => clearTimeout(timer);
+  }, [message]);
+  async function remove() {
+    if (!cacheSession || removing) return;
+    setRemoving(true);
+    setError('');
+    setMessage('');
     try {
-      await deleteSaved(cacheSession, id, kind, range);
-      setRows(await listSaved(cacheSession));
+      await deleteSaved(cacheSession);
+      const rows = await listSaved(cacheSession);
+      setCache({ count: rows.length, bytes: rows.reduce((sum, row) => sum + row.bytes, 0) });
+      setConfirming(false);
+      setMessage('削除しました');
     } catch {
-      setError('保存を削除できませんでした。もう一度お試しください。');
+      setError('削除できませんでした。もう一度お試しください。');
+    } finally {
+      setRemoving(false);
     }
-  }
-  function removeRange() {
-    const start = Date.parse(from + 'T00:00:00+09:00'),
-      end = Date.parse(to + 'T00:00:00+09:00') + 86400000;
-    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
-      setError('削除する期間を確認してください。');
-      return;
-    }
-    if (confirm('指定期間に保存したPDFを、この端末から削除しますか？'))
-      void remove(undefined, undefined, { from: start, to: end });
   }
   return (
-    <div className="page-container reading-page">
-      <Link className="text-link" to="/account">
-        ← アカウントに戻る
+    <div className={`page-container ${styles.page}`}>
+      <Link className={styles.back} to="/account">
+        <ArrowLeft size={18} />
+        アカウント
       </Link>
-      <h1>端末に保存した資料</h1>
-      <p>
-        {offline
-          ? 'オフラインです。以前ログインした同じアカウントの保存資料だけを開けます。'
-          : '閲覧したPDFは、この端末に3日間保存されます。'}
-      </p>
-      <p>
-        オフラインで開いても期限は延びません。ブラウザの空き容量や設定によって保存が失われる場合があります。閉じている間の期限切れは、次に開いたときに削除します。
-      </p>
-      <p role="status">
-        {rows.length}件 · {(rows.reduce((n, r) => n + r.bytes, 0) / 1024 / 1024).toFixed(1)}MiB /{' '}
-        {LIMIT / 1024 / 1024}MiB（PDF本体）
-      </p>
-      {error && <p role="alert">{error}</p>}
-      {!cacheSession && <p>端末への保存を利用できません。通信に接続して作品をご覧ください。</p>}
-      {rows.length === 0 ? (
-        <p>期限内の保存資料はありません。オンラインで作品を開くと保存されます。</p>
-      ) : (
-        <ul className="saved-list">
-          {rows.map((row) => (
-            <li key={row.key}>
-              <Link to={`/works/${row.id}?kind=${row.kind}&from=%2Fsaved`}>
-                {row.work.title} · {DOCUMENT_LABELS[row.kind as keyof typeof DOCUMENT_LABELS]}
-              </Link>
-              <p>
-                {(row.bytes / 1_000_000).toFixed(2)}MB · 期限{' '}
-                {new Date(row.expiresAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} ·
-                残り約{Math.max(0, Math.ceil((row.expiresAt - now) / 3600000))}時間
-              </p>
-              <button className="button quiet" onClick={() => void remove(row.id, row.kind)}>
-                この保存を削除
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <section>
-        <h2>この端末の保存を整理</h2>
-        <p>クラウドの閲覧履歴や、手動でダウンロードしたファイルは削除されません。</p>
-        <label>
-          保存日の開始
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        </label>{' '}
-        <label>
-          保存日の終了
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-        </label>{' '}
-        <button className="button secondary" disabled={!from || !to} onClick={removeRange}>
-          期間内の保存を削除
-        </button>
-        <button
-          className="button secondary"
-          disabled={!rows.length}
-          onClick={() => {
-            if (confirm('この端末の保存PDFをすべて削除しますか？')) void remove();
+      <h1>履歴の管理</h1>
+      <div className={styles.grid}>
+        <section className={styles.card} aria-label="PDFキャッシュの管理">
+          <div className={styles.heading}>
+            <span className={styles.icon}>
+              <HardDrive size={24} strokeWidth={1.6} />
+            </span>
+            <h2>PDFキャッシュ</h2>
+            <span className={styles.badge}>2週間</span>
+          </div>
+          <p className={styles.metrics} aria-label="PDFキャッシュの件数と容量">
+            <span>
+              <strong>{cache?.count ?? '—'}</strong> 件
+            </span>
+            <span>·</span>
+            <span>
+              <strong>{cache ? (cache.bytes / 1_000_000).toFixed(1) : '—'}</strong> MB
+            </span>
+          </p>
+          <button
+            className={styles.clear}
+            aria-label="PDFキャッシュをまとめて削除"
+            disabled={removing || !cacheSession || !cache?.count}
+            onClick={() => {
+              setError('');
+              setConfirming(true);
+            }}
+          >
+            {removing || (cacheSession && cache === null) ? (
+              <LoadingIndicator inline label={removing ? '削除中' : 'キャッシュを確認中'} />
+            ) : message ? (
+              <>
+                <Check size={17} />
+                削除しました
+              </>
+            ) : (
+              <>
+                <Trash2 size={17} />
+                まとめて削除
+              </>
+            )}
+          </button>
+          {message && (
+            <p className="sr-only" role="status">
+              {message}
+            </p>
+          )}
+          {error && !confirming && (
+            <p className={styles.feedback} role="alert">
+              {error}
+            </p>
+          )}
+        </section>
+        <HistoryManagement />
+      </div>
+      {confirming && (
+        <Modal
+          variant="confirm"
+          title="PDFキャッシュを削除しますか？"
+          onClose={() => {
+            if (!removing) setConfirming(false);
           }}
         >
-          保存をすべて削除
-        </button>
-      </section>
-      <p>
-        アプリ内の保存はログアウト時に削除されます。手動で保存したPDFは、3日後も端末に残ります。
-      </p>
+          <p>
+            {cache?.count ?? 0}件 · {((cache?.bytes ?? 0) / 1_000_000).toFixed(1)} MB
+          </p>
+          {error && <p role="alert">{error}</p>}
+          <div className="confirm-modal-actions">
+            <button disabled={removing} onClick={() => setConfirming(false)}>
+              キャンセル
+            </button>
+            <button disabled={removing} onClick={() => void remove()}>
+              {removing ? <LoadingIndicator inline label="削除中" /> : '削除する'}
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

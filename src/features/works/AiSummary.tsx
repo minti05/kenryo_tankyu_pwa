@@ -11,7 +11,7 @@ export function AiSummary({
   summary: WorkSummaryDto;
   onReference: (reference: WorkSummaryEvidenceDto) => void;
 }) {
-  const [references, setReferences] = useState(false);
+  const [references, setReferences] = useState(true);
   const bodyId = useId();
   const spans = summary.evidence
     .flatMap((e) => e.targets.map((t) => ({ ...t, reference: e })))
@@ -30,14 +30,25 @@ export function AiSummary({
       continue;
     parts.push(summary.body.slice(cursor, span.start));
     parts.push(
-      <button
+      <a
         key={span.start}
+        href={`#${bodyId}`}
+        role="button"
         className={styles.reference}
         title={`${DOCUMENT_LABELS[span.reference.kind]} · ${span.reference.page}ページを開く`}
-        onClick={() => onReference(span.reference)}
+        onClick={(event) => {
+          event.preventDefault();
+          onReference(span.reference);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === ' ') {
+            event.preventDefault();
+            if (!event.repeat) onReference(span.reference);
+          }
+        }}
       >
         {summary.body.slice(span.start, span.end)}
-      </button>,
+      </a>,
     );
     cursor = span.end;
   }
@@ -70,7 +81,6 @@ export function AiSummary({
           下線から資料の該当ページへ
         </p>
       )}
-      <p className={styles.note}>AIが作成した要約です。詳しい内容は資料で確認できます。</p>
     </section>
   );
 }
