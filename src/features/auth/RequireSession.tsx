@@ -1,14 +1,10 @@
+import { StartupScreen } from '../../components/StartupScreen';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from './context';
 export default function RequireSession({ children }: { children: React.ReactNode }) {
   const auth = useAuth(),
     location = useLocation();
-  if (!auth.ready || auth.busy)
-    return (
-      <div className="loading-state" role="status">
-        ログイン状態を確認しています…
-      </div>
-    );
+  if (!auth.ready || auth.busy) return <StartupScreen />;
   if (!auth.session)
     return (
       <div className="page-container empty-state">
@@ -39,5 +35,17 @@ export default function RequireSession({ children }: { children: React.ReactNode
         </button>
       </div>
     );
-  return children;
+  return (
+    <>
+      {auth.error && (
+        <div className="page-container" role="status">
+          <p>{auth.error}</p>
+          <button className="button secondary" onClick={() => void auth.retry()}>
+            接続を確認する
+          </button>
+        </div>
+      )}
+      {children}
+    </>
+  );
 }

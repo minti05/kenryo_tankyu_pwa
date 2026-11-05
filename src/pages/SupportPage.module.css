@@ -1,0 +1,123 @@
+.page {
+  width: min(740px, calc(100% - 40px));
+  margin: 28px auto 64px;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  text-decoration: none;
+  min-height: 44px;
+  margin-bottom: 20px;
+}
+.page header {
+  margin-bottom: 32px;
+}
+.page h1 {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  line-height: 1.4;
+}
+.eyebrow {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+.document {
+  font-size: 0.9375rem;
+  line-height: 1.95;
+  overflow-wrap: anywhere;
+}
+.document section {
+  margin-top: 32px;
+}
+.document h2 {
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  margin-bottom: 16px;
+}
+.document p {
+  margin: 12px 0;
+}
+.contact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  margin-top: 40px;
+  padding-top: 24px;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+.contact a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+.form {
+  display: grid;
+  gap: 24px;
+  max-width: 620px;
+}
+.form label {
+  display: grid;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.form input,
+.form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.form textarea {
+  resize: vertical;
+  min-height: 180px;
+}
+.form input:focus-visible,
+.form textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.form > button {
+  justify-self: end;
+  min-width: 140px;
+}
+.note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.8;
+}
+.note a {
+  margin-left: 0.5em;
+}
+.success {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 32px;
+  background: var(--surface);
+  line-height: 1.8;
+}
+.success > svg {
+  color: var(--accent);
+}
+.success h2 {
+  font-size: 1.25rem;
+}
+@media (max-width: 599px) {
+  .page {
+    margin-top: 16px;
+  }
+  .form > button {
+    width: 100%;
+  }
+}

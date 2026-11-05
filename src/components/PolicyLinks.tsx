@@ -1,4 +1,5 @@
-import { ShieldCheck, FileText, Mail, ArrowUpRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ShieldCheck, FileText, Mail, ChevronRight } from 'lucide-react';
 import { CONTACT_URL, PRIVACY_URL, TERMS_URL } from '../lib/links';
 export function PolicyLinks({ settings = false }: { settings?: boolean }) {
   const links = [
@@ -9,17 +10,11 @@ export function PolicyLinks({ settings = false }: { settings?: boolean }) {
   return (
     <>
       {links.map(({ url, label, icon: Icon }) => (
-        <a
-          key={url}
-          className={settings ? 'setting-row' : undefined}
-          href={url}
-          target={url.startsWith('https:') ? '_blank' : undefined}
-          rel={url.startsWith('https:') ? 'noopener noreferrer' : undefined}
-        >
+        <Link key={url} className={settings ? 'setting-row' : undefined} to={url}>
           {settings && <Icon size={21} />}
           <span>{label}</span>
-          {settings && <ArrowUpRight size={16} />}
-        </a>
+          {settings && <ChevronRight size={16} />}
+        </Link>
       ))}
     </>
   );

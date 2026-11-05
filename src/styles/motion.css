@@ -1,0 +1,135 @@
+:root {
+  --motion-quick: 140ms;
+  --motion-normal: 220ms;
+  --motion-ease: cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+/* Small feedback on app controls; leave document gestures and viewer controls alone. */
+:where(.app-shell, dialog, [data-reader-sheet])
+  :where(button, a.button, a.icon-button):not([data-reader-surface] *):not([role='separator']) {
+  transition:
+    scale var(--motion-quick) var(--motion-ease),
+    background-color var(--motion-quick) ease,
+    color var(--motion-quick) ease,
+    border-color var(--motion-quick) ease,
+    box-shadow var(--motion-quick) ease;
+  -webkit-tap-highlight-color: transparent;
+}
+:where(.app-shell, dialog, [data-reader-sheet])
+  :where(button, a.button, a.icon-button):not(:disabled):not([aria-disabled='true']):not(
+    [data-reader-surface] *
+  ):not([role='separator']):not([data-stable-press]):active {
+  scale: 0.96;
+}
+.app-nav {
+  isolation: isolate;
+}
+.app-nav a {
+  position: relative;
+  z-index: 1;
+  transition: color var(--motion-normal) ease;
+}
+.app-nav:has(.nav-active-indicator) a.active {
+  background: transparent;
+}
+.nav-active-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  opacity: 0;
+  transition:
+    transform 320ms var(--motion-ease),
+    width 320ms var(--motion-ease),
+    height 320ms var(--motion-ease),
+    opacity var(--motion-quick) ease;
+}
+.app-nav a :where(svg, .account-avatar) {
+  transition:
+    translate var(--motion-normal) var(--motion-ease),
+    scale var(--motion-quick) ease;
+}
+.app-nav a.active > :where(svg, .account-avatar) {
+  translate: 0 -1px;
+}
+.app-nav a:active > :where(svg, .account-avatar) {
+  scale: 0.9;
+}
+:where(.work-menu-list, .notification-popover, .search-dropdown) {
+  transform-origin: top right;
+  animation: surface-appear 180ms var(--motion-ease);
+}
+:where(.work-modal, .confirm-modal, .version-dialog)[open] {
+  animation: dialog-appear var(--motion-normal) var(--motion-ease);
+}
+:where(.work-modal, .confirm-modal, .version-dialog)[open]::backdrop {
+  animation: backdrop-appear var(--motion-normal) ease;
+}
+:where(.query-form, .search-methods a, .genre-card, .natural-search-entry, .krgp-card) {
+  transition:
+    background-color var(--motion-quick) ease,
+    border-color var(--motion-quick) ease,
+    box-shadow var(--motion-normal) ease,
+    scale var(--motion-quick) var(--motion-ease);
+}
+:where(.search-methods a, .genre-card, .natural-search-entry, .krgp-card):active {
+  scale: 0.985;
+}
+.favorite-button[aria-pressed='true'] svg {
+  animation: favorite-confirm 300ms var(--motion-ease);
+}
+@keyframes surface-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes dialog-appear {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes backdrop-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes favorite-confirm {
+  0%,
+  100% {
+    scale: 1;
+  }
+  45% {
+    scale: 1.18;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.app-shell, dialog, [data-reader-sheet]) :where(button, a) {
+    scale: none !important;
+  }
+  .app-nav a > :where(svg, .account-avatar) {
+    translate: none;
+    scale: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

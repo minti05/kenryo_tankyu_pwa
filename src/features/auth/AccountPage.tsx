@@ -1,7 +1,9 @@
+import { InstallSetting } from '../install/InstallSetting';
+import { StartupScreen } from '../../components/StartupScreen';
 import { DisplaySettings } from './DisplaySettings';
 import { useDisplayIdentity } from './display-context';
 import { schoolGrade } from '../../contracts/access.generated';
-import { Moon, LogOut, HardDrive, ChevronRight } from 'lucide-react';
+import { Moon, LogOut, History, ChevronRight } from 'lucide-react';
 import { PushSettings } from '../notifications/PushSettings';
 import { useTheme } from '../../lib/theme';
 import './settings.css';
@@ -19,12 +21,7 @@ export default function AccountPage() {
     [deleting, setDeleting] = useState(false),
     [deleteError, setDeleteError] = useState('');
   const { session, busy, logout, deleteAccount, error, offline, profile } = useAuth();
-  if (busy)
-    return (
-      <div className="loading-state" role="status">
-        利用資格を確認しています…
-      </div>
-    );
+  if (busy) return <StartupScreen />;
   if (!session) return <Navigate to="/welcome" replace />;
   return (
     <div className="page-container settings-page">
@@ -43,6 +40,7 @@ export default function AccountPage() {
           {offline && <small>オフラインで利用中</small>}
         </div>
       </div>
+      <InstallSetting />
       <DisplaySettings />
       <section className="settings-group" aria-label="表示と通知">
         <div className="setting-row">
@@ -62,9 +60,9 @@ export default function AccountPage() {
           </button>
         </div>
         <PushSettings compact />
-        <Link className="setting-row saved-setting" to="/saved">
-          <HardDrive size={21} />
-          <span>端末に保存した資料</span>
+        <Link className="setting-row saved-setting" to="/saved" aria-label="履歴の管理">
+          <History size={21} />
+          <span>履歴の管理</span>
           <ChevronRight size={18} />
         </Link>
       </section>
