@@ -16,6 +16,21 @@ export const DOCUMENT_LABELS: Record<DocumentType, string> = {
 };
 export const categoryLabel = (id: string) =>
   CATEGORY_CATALOG.find((c) => c.id === id)?.label ?? 'その他';
+export function workCategoryLabels(
+  work: Pick<WorkDto, 'category1' | 'category2' | 'subCategory1' | 'subCategory2'>,
+): string[] {
+  return [
+    [work.category1, work.subCategory1],
+    [work.category2, work.subCategory2],
+  ]
+    .filter(([category]) => category !== 'none')
+    .map(([id, subId]) => {
+      const category = CATEGORY_CATALOG.find((item) => item.id === id);
+      const label = category?.label ?? 'その他';
+      const sub = category?.subcategories.find((item) => item.id === subId)?.label;
+      return sub ?? label;
+    });
+}
 export function documentTypes(
   work: Pick<WorkDto, 'existsPoster' | 'existsReport' | 'existsThesis' | 'existsSlide'>,
 ): DocumentType[] {

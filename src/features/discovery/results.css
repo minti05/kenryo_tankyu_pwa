@@ -6,7 +6,7 @@
 }
 .results-controls {
   position: sticky;
-  top: 68px;
+  top: calc(68px + var(--app-safe-top, 0px));
   z-index: 15;
   background: var(--canvas);
   padding: 12px 0;
@@ -100,11 +100,11 @@
   background: var(--accent-soft);
 }
 .filter-dialog {
-  inset: 0 0 0 auto;
+  inset: var(--app-safe-top, 0px) var(--app-safe-right, 0px) env(safe-area-inset-bottom, 0px) auto;
   margin: 0;
   width: min(90vw, 420px);
   max-width: none;
-  height: 100dvh;
+  height: calc(100dvh - var(--app-safe-top, 0px) - env(safe-area-inset-bottom, 0px));
   max-height: none;
   border: 0;
   padding: 0;
@@ -204,10 +204,11 @@
 }
 @media (min-width: 1200px), (min-width: 900px) and (orientation: landscape) {
   .results-controls {
-    top: 80px;
+    top: calc(80px + var(--app-safe-top, 0px));
   }
   .filter-dialog {
-    inset: 0;
+    inset: var(--app-safe-top, 0px) var(--app-safe-right, 0px) env(safe-area-inset-bottom, 0px)
+      var(--app-safe-left, 0px);
     margin: auto;
     width: 640px;
     height: fit-content;

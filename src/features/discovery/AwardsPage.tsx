@@ -1,3 +1,6 @@
+import { PAGE_SIZE } from '../../contracts/query.generated';
+import { LoadMoreButton } from '../../components/LoadMoreButton';
+import { LoadingSkeleton } from '../../components/Loading';
 import { awardsQueryKey, awardsView, AWARDS_FRESH_MS } from './awards-cache';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
@@ -19,7 +22,7 @@ export default function AwardsPage() {
       <div className="page-container empty-state">
         <p>受賞作品を探すには通信に接続してください。</p>
         <Link to="/saved" className="button secondary">
-          端末の保存を開く
+          履歴の管理を開く
         </Link>
       </div>
     );
@@ -80,7 +83,7 @@ function AwardsCollection() {
       /* optional */
     }
     restored.current = '';
-    setPagination({ raw: next.toString(), count: 20 });
+    setPagination({ raw: next.toString(), count: PAGE_SIZE });
     setParams(next);
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
@@ -217,9 +220,12 @@ function AwardsCollection() {
           {invalid ? (
             <p role="alert">検索条件を確認してください。</p>
           ) : works.isPending ? (
-            <p className="awards-status" role="status">
-              受賞作品を読み込んでいます…
-            </p>
+            <LoadingSkeleton
+              label="受賞作品を読み込み中"
+              cards
+              count={6}
+              className={`${grid.workGrid} awards-grid`}
+            />
           ) : works.isError ? (
             <div className="empty-state" role="alert">
               <p>受賞作品を取得できませんでした。</p>
@@ -266,12 +272,9 @@ function AwardsCollection() {
                 </p>
               )}
               {allItems.length > visibleCount && (
-                <button
-                  className="button secondary"
-                  onClick={() => setPagination({ raw, count: visibleCount + 20 })}
-                >
-                  さらに表示
-                </button>
+                <LoadMoreButton
+                  onClick={() => setPagination({ raw, count: visibleCount + PAGE_SIZE })}
+                />
               )}
             </>
           )}
@@ -285,7 +288,7 @@ function readPosition(key: string): { top: number; count: number } {
   try {
     const value: unknown = JSON.parse(sessionStorage.getItem(key) ?? 'null');
     if (typeof value === 'number' && Number.isFinite(value))
-      return { top: Math.max(0, value), count: 20 };
+      return { top: Math.max(0, value), count: PAGE_SIZE };
     if (
       value &&
       typeof value === 'object' &&
@@ -296,9 +299,12 @@ function readPosition(key: string): { top: number; count: number } {
       typeof value.count === 'number' &&
       Number.isInteger(value.count)
     )
-      return { top: Math.max(0, value.top), count: Math.min(2000, Math.max(20, value.count)) };
+      return {
+        top: Math.max(0, value.top),
+        count: Math.min(2000, Math.max(PAGE_SIZE, value.count)),
+      };
   } catch {
     /* Position storage is optional. */
   }
-  return { top: 0, count: 20 };
+  return { top: 0, count: PAGE_SIZE };
 }

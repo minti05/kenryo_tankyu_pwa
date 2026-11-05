@@ -33,6 +33,9 @@ const FILTER_KEYS = [
   'award',
   'awardName',
 ];
+export function hasSearchConditions(params: URLSearchParams, awards = false) {
+  return awards || FILTER_KEYS.some((key) => Boolean(params.get(key)?.trim()));
+}
 export function conditionLabels(params: URLSearchParams) {
   const category = CATEGORY_CATALOG.find((c) => c.id === params.get('category'));
   const labels: Record<string, string | undefined> = {

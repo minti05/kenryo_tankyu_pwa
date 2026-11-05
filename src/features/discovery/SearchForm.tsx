@@ -4,7 +4,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { useAuth } from '../auth/context';
 import './discovery.css';
-import { recordSearch, historyMessage, cacheSearchHistory } from './search-history';
+import { hasSearchConditions } from './filter-options';
+import { recordSearchInBackground } from './search-history';
+import { clearResultsPosition } from './results-position';
 export function SearchForm({
   autoFocus = false,
   className = '',
@@ -32,16 +34,24 @@ export function SearchForm({
     location = useLocation(),
     navigate = useNavigate(),
     query = useQueryClient();
-  const [busy, setBusy] = useState(false),
-    id = useId();
+  const [typed, setTyped] = useState<{ basis: string; value: string } | null>(null);
+  const id = useId();
   const searchLocation = source ? new URL(source, window.location.origin) : location;
   const params = new URLSearchParams(searchLocation.search),
     q = params.get('q') || '';
+  const current = typed?.basis === q ? typed.value : q;
+  const conditions =
+    source || ['/results', '/awards', '/search'].includes(location.pathname)
+      ? new URLSearchParams(searchLocation.search)
+      : new URLSearchParams();
+  if (current.trim()) conditions.set('q', current.trim());
+  else conditions.delete('q');
+  const canSearch = hasSearchConditions(conditions, searchLocation.pathname === '/awards');
   return (
     <form
       className={`query-form ${className}`}
       role="search"
-      onSubmit={async (e) => {
+      onSubmit={(e) => {
         e.preventDefault();
         const value = String(new FormData(e.currentTarget).get('q') || '').trim();
         const next =
@@ -52,19 +62,11 @@ export function SearchForm({
         next.delete('awardsOnly');
         if (value) next.set('q', value);
         else next.delete('q');
-        let error = '';
-        setBusy(true);
-        try {
-          const updated = await recordSearch(request, next, searchLocation.pathname === '/awards');
-          cacheSearchHistory(query, session?.uid, updated);
-        } catch (e) {
-          error = historyMessage(e);
-        } finally {
-          setBusy(false);
-        }
-        navigate(`${searchLocation.pathname === '/awards' ? '/awards' : '/results'}?${next}`, {
-          state: { historyError: error },
-        });
+        if (!hasSearchConditions(next, searchLocation.pathname === '/awards')) return;
+        const awards = searchLocation.pathname === '/awards';
+        clearResultsPosition(session?.uid, awards ? '/api/awards' : '/api/works', next);
+        navigate(`${awards ? '/awards' : '/results'}?${next}`);
+        recordSearchInBackground(query, session?.uid, request, next, awards);
         onSubmitted?.();
       }}
     >
@@ -77,7 +79,7 @@ export function SearchForm({
         type="search"
         name="q"
         defaultValue={q}
-        placeholder="検索"
+        placeholder="キーワードで検索"
         maxLength={100}
         autoComplete="off"
         autoFocus={autoFocus}
@@ -96,13 +98,14 @@ export function SearchForm({
           onActivate?.();
         }}
         onChange={(event) => {
+          setTyped({ basis: q, value: event.target.value });
           onActivate?.();
           onQueryChange?.(event.target.value);
         }}
         aria-expanded={expanded}
         aria-controls={controls}
       />
-      <button type="submit" disabled={busy} aria-label="検索する">
+      <button type="submit" disabled={!canSearch} aria-label="検索する">
         <Search size={21} />
       </button>
     </form>

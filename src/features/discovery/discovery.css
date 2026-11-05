@@ -74,22 +74,27 @@
   border-left: 5px solid var(--genre-color);
   transition: transform 0.15s;
 }
-.genre-card[data-category='society'] {
+.genre-card[data-category='society'],
+.genre-card[data-category='community'] {
   --genre-color: #d83d00;
 }
-.genre-card[data-category='history'] {
+.genre-card[data-category='history'],
+.genre-card[data-category='humanities'] {
   --genre-color: #d88c00;
 }
-.genre-card[data-category='rights'] {
+.genre-card[data-category='rights'],
+.genre-card[data-category='society'] {
   --genre-color: #492256;
 }
 .genre-card[data-category='international'] {
   --genre-color: #1d00d8;
 }
-.genre-card[data-category='business'] {
+.genre-card[data-category='business'],
+.genre-card[data-category='economy'] {
   --genre-color: #00d89e;
 }
-.genre-card[data-category='industry'] {
+.genre-card[data-category='industry'],
+.genre-card[data-category='agriculture'] {
   --genre-color: #b1d800;
 }
 .genre-card[data-category='education'] {
@@ -98,19 +103,23 @@
 .genre-card[data-category='environment'] {
   --genre-color: #00d827;
 }
-.genre-card[data-category='science'] {
+.genre-card[data-category='science'],
+.genre-card[data-category='nature'] {
   --genre-color: #0070d8;
 }
 .genre-card[data-category='technology'] {
   --genre-color: #00d8cd;
 }
-.genre-card[data-category='health'] {
+.genre-card[data-category='health'],
+.genre-card[data-category='mind_body'] {
   --genre-color: #d80089;
 }
-.genre-card[data-category='art'] {
+.genre-card[data-category='art'],
+.genre-card[data-category='arts'] {
   --genre-color: #d85e00;
 }
-.genre-card[data-category='life'] {
+.genre-card[data-category='life'],
+.genre-card[data-category='food_life'] {
   --genre-color: #d4d800;
 }
 .genre-card[data-category='other'] {
@@ -130,7 +139,6 @@
   width: 84px;
   height: 84px;
   opacity: 0.5;
-  transform: rotate(-12deg);
   z-index: -1;
 }
 .genre-card picture img {
@@ -335,4 +343,136 @@
 }
 .condition-suggestions .history-list a span {
   flex: 1;
+}
+
+.natural-search-entry {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 24px;
+  padding: 22px;
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line));
+  border-radius: 16px;
+  background: linear-gradient(120deg, var(--accent-soft), var(--surface));
+  text-decoration: none;
+}
+.natural-search-symbol {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 15px;
+  background: var(--surface);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.natural-search-entry > div {
+  flex: 1;
+  min-width: 0;
+}
+.natural-search-entry strong {
+  display: block;
+  font-size: 1rem;
+  font-weight: 650;
+}
+.natural-search-entry > div > span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-top: 6px;
+}
+.natural-search-status {
+  font-size: 0.625rem;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+.natural-search-entry > svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+@media (max-width: 600px) {
+  .natural-search-entry {
+    padding: 17px 14px;
+    gap: 11px;
+  }
+  .natural-search-entry strong {
+    font-size: 0.875rem;
+  }
+  .natural-search-entry .natural-search-status {
+    display: none;
+  }
+}
+
+.search-page .search-methods {
+  margin: 18px 0;
+  border-block: 1px solid var(--line);
+}
+.search-methods .category-entry {
+  margin: 0;
+  padding: 12px 4px;
+  min-height: 48px;
+  border: 0;
+}
+.search-methods .category-entry + .category-entry {
+  border-top: 1px solid var(--line);
+}
+.search-header-target {
+  width: 100%;
+  min-width: 0;
+}
+.search-header-target .search-entry {
+  animation: search-header-enter 0.28s cubic-bezier(0.18, 0.8, 0.25, 1);
+}
+@keyframes search-header-enter {
+  from {
+    opacity: 0;
+    transform: translateX(18px) scaleX(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scaleX(1);
+  }
+}
+@media (max-width: 899px), (max-width: 1199px) and (orientation: portrait) {
+  .search-focused .header-brand {
+    display: none;
+  }
+  .search-focused.signed-in .header-inner {
+    display: flex;
+    width: calc(100% - 24px);
+  }
+  .search-page {
+    padding-top: 8px;
+  }
+  .search-page .search-methods {
+    margin: 0 0 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .search-header-target .search-entry {
+    animation: none;
+  }
+}
+
+/* Keep category accents in step with their artwork in both themes. */
+.genre-card[data-category='sports'] {
+  --genre-color: #d80000;
+}
+.genre-card[data-category='entertainment'] {
+  --genre-color: #7b00d8;
+}
+:root[data-theme='light'] .genre-card[data-category='food_life'],
+:root[data-theme='light'] .genre-card[data-category='life'] {
+  --genre-color: #807d00;
+}
+:root[data-theme='dark'] .genre-card[data-category='society'],
+:root[data-theme='dark'] .genre-card[data-category='rights'] {
+  --genre-color: #c58cdd;
+}
+.genre-card[data-category='society'] picture,
+.genre-card[data-category='food_life'] picture {
+  opacity: 1;
 }

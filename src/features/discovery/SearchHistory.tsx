@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '../../components/Loading';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -71,7 +72,7 @@ export function SearchHistory({
       {offline ? (
         <p>検索履歴はオンラインで確認できます。</p>
       ) : history.isPending ? (
-        <p role="status">検索履歴を読み込んでいます…</p>
+        <LoadingSkeleton label="検索履歴を読み込み中" />
       ) : history.isError ? (
         <div role="status">
           <p>検索履歴を読み込めませんでした。</p>

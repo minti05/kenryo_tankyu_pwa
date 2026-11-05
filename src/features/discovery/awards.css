@@ -11,10 +11,10 @@
   min-width: 0;
   grid-template-columns: minmax(0, 1fr);
   position: sticky;
-  top: 96px;
+  top: calc(96px + var(--app-safe-top, 0px));
   display: grid;
   gap: 28px;
-  max-height: calc(100dvh - 120px);
+  max-height: calc(100dvh - var(--app-safe-top, 0px) - 120px);
   overflow-y: auto;
   padding-right: 5px;
 }
@@ -114,9 +114,9 @@
   color: var(--muted);
   margin-block: 28px 16px;
 }
-@media (min-width: 1450px) {
+@media (min-width: 768px) and (max-width: 1199px) {
   .awards-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 999px) {
@@ -128,7 +128,7 @@
   }
   .awards-browser {
     position: sticky;
-    top: 68px;
+    top: calc(68px + var(--app-safe-top, 0px));
     z-index: 8;
     max-height: none;
     overflow: visible;
@@ -176,7 +176,7 @@
 }
 @media (max-width: 767px) {
   .awards-browser {
-    top: 68px;
+    top: calc(68px + var(--app-safe-top, 0px));
   }
   .awards-grid {
     grid-template-columns: minmax(0, 1fr);

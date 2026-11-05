@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '../components/Loading';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Trophy } from 'lucide-react';
@@ -6,11 +7,13 @@ import type { SearchPageDto } from '../contracts/discovery.generated';
 import { LiveWorkCard } from '../features/discovery/LiveWorkCard';
 import discoveryStyles from '../features/discovery/PreviewRoutes.module.css';
 import './home.css';
+import { useDiscoveryDay } from './daily-discovery';
 
 export default function HomePage() {
   const { session, request, offline } = useAuth();
+  const day = useDiscoveryDay();
   const recommended = useQuery({
-    queryKey: ['discovery', session?.uid],
+    queryKey: ['discovery', session?.uid, day],
     enabled: !!session && !offline,
     queryFn: ({ signal }) => request<SearchPageDto>('/api/discovery', { signal }),
   });
@@ -27,7 +30,7 @@ export default function HomePage() {
       </Link>
       <section aria-labelledby="home-recommended-title">
         <div className="home-section-heading">
-          <h2 id="home-recommended-title">今日のあなたに</h2>
+          <h2 id="home-recommended-title">今日のおすすめ</h2>
           <Link className="text-link" to="/explore">
             探索する
             <ArrowRight size={16} />
@@ -35,10 +38,15 @@ export default function HomePage() {
         </div>
         {offline ? (
           <Link className="button secondary" to="/saved">
-            端末の保存を開く
+            履歴の管理を開く
           </Link>
         ) : recommended.isPending ? (
-          <p role="status">作品を読み込んでいます…</p>
+          <LoadingSkeleton
+            label="おすすめの作品を読み込み中"
+            cards
+            count={4}
+            className={discoveryStyles.workGrid}
+          />
         ) : recommended.isError ? (
           <p role="status">
             作品を取得できませんでした。
