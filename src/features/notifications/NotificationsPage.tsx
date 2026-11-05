@@ -1,10 +1,14 @@
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState, useRef } from 'react';
+import { LoadMoreButton } from '../../components/LoadMoreButton';
+import { LoadingSkeleton } from '../../components/Loading';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import type { NoticesDto, NoticeDto } from '../../contracts/notifications.generated';
 import { useAuth } from '../auth/context';
 import { PushSettings } from './PushSettings';
+import { markNoticeRead, noticeIsRead } from './local-state';
+import { useLocalNoticeState } from './queries';
 import './notifications.css';
 export default function NotificationsPage() {
   const [params] = useSearchParams();
@@ -29,6 +33,7 @@ export function NotificationsPanel({
 }) {
   const { request, session, offline } = useAuth();
   const [open, setOpen] = useState(initialNotice);
+  const local = useLocalNoticeState();
   const data = useInfiniteQuery({
     queryKey: ['notifications', session?.uid],
     enabled: !offline,
@@ -60,7 +65,7 @@ export function NotificationsPanel({
         <p role="status">お知らせはオンラインで確認できます。</p>
       ) : (
         <>
-          {data.isPending && <p role="status">お知らせを読み込んでいます…</p>}
+          {data.isPending && !open && <LoadingSkeleton label="お知らせを読み込み中" />}
           {data.isError && (
             <div role="alert">
               <p>お知らせを取得できませんでした。</p>
@@ -104,8 +109,8 @@ export function NotificationsPanel({
                   <article key={n.id}>
                     <button className="notice-item" onClick={() => setOpen(n.id)}>
                       <span
-                        className={n.read ? 'notice-read' : 'notice-unread'}
-                        aria-label={n.read ? '既読' : '未読'}
+                        className={noticeIsRead(local.data, n) ? 'notice-read' : 'notice-unread'}
+                        aria-label={noticeIsRead(local.data, n) ? '既読' : '未読'}
                       />
                       <span>
                         <time>
@@ -124,13 +129,12 @@ export function NotificationsPanel({
                 <p className="notice-empty">お知らせはまだありません。</p>
               )}
               {data.hasNextPage && (
-                <button
-                  className="button quiet notice-more"
-                  disabled={data.isFetchingNextPage}
+                <LoadMoreButton
+                  label="以前のお知らせを見る"
+                  loadingLabel="以前のお知らせを読み込み中"
+                  loading={data.isFetchingNextPage}
                   onClick={() => void data.fetchNextPage()}
-                >
-                  {data.isFetchingNextPage ? '読み込み中…' : '以前のお知らせを見る'}
-                </button>
+                />
               )}
             </>
           )}
@@ -141,37 +145,29 @@ export function NotificationsPanel({
 }
 
 function NoticeDetail({ id, onNavigate }: { id: string; onNavigate: () => void }) {
-  const { request, session } = useAuth(),
-    query = useQueryClient(),
-    call = useRef(request),
-    [error, setError] = useState(false);
-  useEffect(() => {
-    call.current = request;
-  }, [request]);
+  const { request, session } = useAuth();
+  const local = useLocalNoticeState();
+  const [error, setError] = useState(false);
   const item = useQuery({
     queryKey: ['notice', session?.uid, id],
     queryFn: () => request<NoticeDto>('/api/notifications/' + id),
     staleTime: 0,
   });
   async function mark() {
+    if (!session || !item.data) return;
     try {
-      await call.current('/api/notification-reads/' + id, { method: 'PUT', body: '{}' });
+      await markNoticeRead(session.uid, item.data);
       setError(false);
-      void query.invalidateQueries({ queryKey: ['notifications'] });
     } catch {
       setError(true);
     }
   }
   useEffect(() => {
-    if (!item.data) return;
+    if (!session || !item.data || !local.data || noticeIsRead(local.data, item.data)) return;
     let alive = true;
-    void call
-      .current('/api/notification-reads/' + id, { method: 'PUT', body: '{}' })
+    void markNoticeRead(session.uid, item.data)
       .then(() => {
-        if (alive) {
-          setError(false);
-          void query.invalidateQueries({ queryKey: ['notifications'] });
-        }
+        if (alive) setError(false);
       })
       .catch(() => {
         if (alive) setError(true);
@@ -179,8 +175,8 @@ function NoticeDetail({ id, onNavigate }: { id: string; onNavigate: () => void }
     return () => {
       alive = false;
     };
-  }, [item.data, id, query]);
-  if (item.isPending) return <p role="status">お知らせの内容を読み込んでいます…</p>;
+  }, [session, item.data, local.data]);
+  if (item.isPending) return <LoadingSkeleton label="お知らせの内容を読み込み中" count={1} />;
   if (item.isError)
     return (
       <div role="alert">
@@ -201,7 +197,7 @@ function NoticeDetail({ id, onNavigate }: { id: string; onNavigate: () => void }
       )}
       {error && (
         <p role="status">
-          既読を記録できませんでした。
+          この端末に既読を保存できませんでした。
           <button className="button secondary" onClick={() => void mark()}>
             既読を再試行
           </button>

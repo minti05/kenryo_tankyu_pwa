@@ -1,0 +1,8 @@
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+/assets/recover.html
+  Cache-Control: no-store
+/assets/recover.js
+  Cache-Control: no-store
+/assets/recover
+  Cache-Control: no-store

@@ -75,7 +75,7 @@ async function waitSaved(page: Page) {
       { timeout: 30000 },
     )
     .toBe(true);
-  await expect(page.getByText('この端末に3日間保存しました。', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('この端末に2週間保存しました。', { exact: true })).toHaveCount(0);
 }
 async function save(page: Page) {
   await page.goto('/works/24000010');
@@ -108,14 +108,12 @@ test('閲覧した種類だけ保存・完全オフラインの再起動・表�
   expect(before).toHaveLength(1);
   expect(before[0]!.kind).toBe('poster');
   await page.goto('/saved');
-  await expect(page.getByRole('link', { name: /架空のオフライン作品/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '履歴の管理', exact: true })).toBeVisible();
   const count = (await calls()).length;
   await context.setOffline(true);
   await page.reload();
-  await expect(
-    page.getByText('オフラインです。以前ログインした同じアカウントの保存資料だけを開けます。'),
-  ).toBeVisible();
-  await page.getByRole('link', { name: /架空のオフライン作品/ }).click();
+  await expect(page.getByText('オフライン', { exact: true })).toBeVisible();
+  await page.goto('/works/24000010');
   await expect
     .poll(
       () =>
@@ -167,10 +165,11 @@ test('オンライン再閲覧はHEADで再認可しGETを繰り返さず、更�
   expect(updated).toHaveLength(1);
   expect(updated[0]!.revision).toBe('b'.repeat(64));
 });
-test('72時間ちょうどで表示中のPDF・保存リンクを破棄する', async ({ page, context }) => {
+test('2週間ちょうどで表示中のPDF・保存リンクを破棄する', async ({ page, context }) => {
   await fixture(page, context);
   await save(page);
   const entry = (await rows(page))[0]!;
+  expect(entry.expiresAt - entry.onlineViewedAt).toBe(14 * 24 * 60 * 60 * 1000);
   await context.setOffline(true);
   await page.reload();
   await expectPixels(page);
@@ -386,24 +385,34 @@ for (const [name, width, height] of [
   ['iPad', 820, 1180],
   ['PC', 1440, 1000],
 ] as const)
-  test(`${name}: 保存一覧・容量・削除・横幅`, async ({ page, context }, testInfo) => {
+  test(`${name}: 履歴管理の表示・一括削除・横幅`, async ({ page, context }, testInfo) => {
     await page.setViewportSize({ width, height });
     await fixture(page, context);
     await save(page);
     await page.goto('/saved');
-    await expect(page.getByRole('link', { name: /架空のオフライン作品/ })).toBeVisible();
-    await expect(page.getByText(/1件 · .*MiB \/ 100MiB/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: '履歴の管理', exact: true })).toBeVisible();
+    await expect(page.getByText('2週間', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('PDFキャッシュの件数と容量')).toContainText('1 件');
+    await expect(page.getByLabel('PDFキャッシュの件数と容量')).toContainText('MB');
+    await expect(page.locator('.saved-list')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: /架空のオフライン作品/ })).toHaveCount(0);
+    await expect(page.getByText('期間を指定して削除', { exact: true })).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
-    if (name === 'iPad')
-      await page.screenshot({ path: testInfo.outputPath('saved-ipad.png'), fullPage: true });
-    const day = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' });
-    await page.getByLabel('保存日の開始').fill(day);
-    await page.getByLabel('保存日の終了').fill(day);
-    page.on('dialog', (d) => d.accept());
-    await page.getByRole('button', { name: '期間内の保存を削除' }).click();
-    await expect(page.getByRole('link', { name: /架空のオフライン作品/ })).toHaveCount(0);
+    await page.screenshot({
+      path: testInfo.outputPath(`history-management-${name}.png`),
+      fullPage: true,
+    });
+    const clear = page.getByRole('button', { name: 'PDFキャッシュをまとめて削除', exact: true });
+    await expect(clear).toBeEnabled();
+    await clear.click();
+    await page.getByRole('dialog').getByRole('button', { name: 'キャンセル', exact: true }).click();
+    expect((await rows(page)).length).toBeGreaterThan(0);
+    await clear.click();
+    await page.getByRole('dialog').getByRole('button', { name: '削除する', exact: true }).click();
+    await expect.poll(async () => (await rows(page)).length).toBe(0);
+    await expect(clear).toBeDisabled();
   });
 
 test('一時的な容量エラーは一度だけ再試行し、利用者切替は保存を消す', async ({ page, context }) => {
@@ -590,7 +599,10 @@ test('通知: 単一SWを指定した登録・前景案内・内容表示と既�
   await page.getByRole('button', { name: 'お知らせ一覧', exact: true }).click();
   await expect(page.getByLabel('既読', { exact: true })).toHaveCount(1);
 });
-test('通知: 背景では一般文のみ表示・タップ先は自サービスの固定URL', async ({ page, context }) => {
+test('通知: 背景ではお知らせタイトルを表示・タップ先は自サービスの固定URL', async ({
+  page,
+  context,
+}) => {
   await notificationFixture(page, context);
   await enableNotifications(page);
   const b = await binding(page),
@@ -598,15 +610,17 @@ test('通知: 背景では一般文のみ表示・タップ先は自サービス
       type: 'archive-notice',
       noticeId: '11111111-1111-4111-8111-111111111111',
       binding: b!.binding,
-      title: '漏れてはいけない作者名',
+      title: '探究発表会のお知らせ',
       url: 'https://evil.example',
     };
   const result = await pushMessage(page, 'FIXTURE_PUSH', data);
   expect(result.shown).toHaveLength(1);
-  expect(result.shown[0]!.options.body).toBe(
+  expect(result.shown[0]!.title).toBe('探究アーカイブ');
+  expect(result.shown[0]!.options.body).toBe('探究発表会のお知らせ');
+  const legacy = await pushMessage(page, 'FIXTURE_PUSH', { ...data, title: '' });
+  expect(legacy.shown[0]!.options.body).toBe(
     '新しいお知らせがあります。アプリで確認してください。',
   );
-  expect(JSON.stringify(result.shown)).not.toContain('漏れてはいけない作者名');
   const click = await pushMessage(page, 'FIXTURE_CLICK', data);
   expect(click.opened.at(-1)).toBe(
     'http://127.0.0.1:4178/notifications?open=11111111-1111-4111-8111-111111111111',
@@ -846,6 +860,7 @@ test('全画面で閲覧中でも期限が切れたらPDFを閉じスクロー�
   await fixture(page, context);
   await save(page);
   const entry = (await rows(page))[0]!;
+  expect(entry.expiresAt - entry.onlineViewedAt).toBe(14 * 24 * 60 * 60 * 1000);
   await context.setOffline(true);
   await page.reload();
   await expectPixels(page);
@@ -888,4 +903,91 @@ test('オフラインでも資料切替の確認中にPDFを隠し、全画面�
   );
   await page.getByRole('button', { name: '全画面表示を解除', exact: true }).click();
   await expect(page.locator('.site-header')).not.toHaveAttribute('inert');
+});
+
+test.describe('起動時の認証復元', () => {
+  test.use({ serviceWorkers: 'block' });
+  for (const entry of ['/welcome', '/welcome?next=%2Flibrary', '/library']) {
+    test(`ログイン画面を挟まずアイコン画面から復帰: ${entry}`, async ({
+      page,
+      context,
+    }, testInfo) => {
+      await context.addCookies([
+        { url: 'http://127.0.0.1:4178', name: 'offline-test', value: crypto.randomUUID() },
+      ]);
+      await page.addInitScript(() => {
+        localStorage.setItem('offline-fixture-user', 'fixture-alice');
+      });
+      let release!: () => void;
+      const blocked = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await page.route('**/api/session', async (route) => {
+        await blocked;
+        await route.fulfill({ json: { version: '1', uid: 'fixture-alice', role: 'student' } });
+      });
+      await page.route('**/api/history', (route) =>
+        route.fulfill({ json: { version: '1', items: [], nextCursor: null } }),
+      );
+      await page.goto(entry);
+      await expect(
+        page.getByRole('status', { name: 'ログイン状態を確認中', exact: true }),
+      ).toBeVisible();
+      await expect(page.locator('img[src="/icons/app-icon.png"]')).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: '学校のGoogleアカウントでログイン' }),
+      ).toHaveCount(0);
+      await page.screenshot({ path: testInfo.outputPath('startup.png') });
+      release();
+      await expect(page).toHaveURL(entry === '/welcome' ? /\/home$/ : /\/library$/);
+      await expect(
+        page.getByRole('heading', {
+          name: entry === '/welcome' ? 'ホーム' : 'ライブラリ',
+          exact: true,
+        }),
+      ).toBeAttached();
+      await expect(
+        page.getByRole('status', { name: 'ログイン状態を確認中', exact: true }),
+      ).toHaveCount(0);
+    });
+  }
+  test('認証期限切れならローディングを終了してログインを案内する', async ({ page, context }) => {
+    await context.addCookies([
+      { url: 'http://127.0.0.1:4178', name: 'offline-test', value: crypto.randomUUID() },
+    ]);
+    await page.addInitScript(() => {
+      localStorage.setItem('offline-fixture-user', 'fixture-alice');
+    });
+    await page.route('**/api/session', (route) =>
+      route.fulfill({ status: 401, json: { error: { code: 'session_expired' } } }),
+    );
+    await page.goto('/welcome');
+    await expect(page.getByRole('button', { name: '探究アーカイブをはじめる' })).toBeEnabled();
+    await expect(
+      page.getByRole('status', { name: 'ログイン状態を確認中', exact: true }),
+    ).toHaveCount(0);
+  });
+});
+
+test('保存資料の管理でオフラインでもPDFキャッシュを一括削除し、閲覧履歴の削除は無効にする', async ({
+  page,
+  context,
+}) => {
+  const { calls } = await fixture(page, context);
+  await save(page);
+  await context.setOffline(true);
+  await page.goto('/saved');
+  await expect(page.getByRole('heading', { name: '履歴の管理', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: '閲覧履歴をまとめて削除', exact: true }),
+  ).toBeDisabled();
+  const clear = page.getByRole('button', { name: 'PDFキャッシュをまとめて削除', exact: true });
+  await expect(clear).toBeEnabled();
+  await clear.click();
+  await page.getByRole('dialog').getByRole('button', { name: '削除する', exact: true }).click();
+  await expect.poll(async () => (await rows(page)).length).toBe(0);
+  await expect(clear).toBeDisabled();
+  await expect(page.getByRole('status').filter({ hasText: '削除しました' })).toBeVisible();
+  await context.setOffline(false);
+  expect((await calls()).filter((call) => call.startsWith('DELETE /api/history'))).toHaveLength(0);
 });
