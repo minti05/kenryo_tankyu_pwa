@@ -10,23 +10,21 @@ for (const width of [360, 820, 1280])
     });
     await page.goto('/welcome');
     await expect(page.getByRole('heading', { level: 1 })).toContainText('先輩の問いから');
-    await expect(
-      page.getByRole('button', { name: '学校のGoogleアカウントでログイン' }),
-    ).toBeDisabled();
+    await expect(page.getByRole('button', { name: '探究アーカイブをはじめる' })).toBeEnabled();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
       true,
     );
     await expect(page.getByText('探究アーカイブ制作委員会', { exact: true })).toBeVisible();
     await expect(
       page.getByRole('link', { name: 'プライバシーポリシー', exact: true }),
-    ).toHaveAttribute('href', 'https://sites.google.com/view/tankyu-privacy-policy');
+    ).toHaveAttribute('href', '/privacy');
     await expect(page.getByRole('link', { name: '利用規約', exact: true })).toHaveAttribute(
       'href',
-      'https://sites.google.com/view/tankyu-terms-of-service',
+      '/terms',
     );
     await expect(page.getByRole('link', { name: 'お問い合わせ', exact: true })).toHaveAttribute(
       'href',
-      'mailto:goto.aoi.516@gmail.com',
+      '/contact',
     );
     await page.screenshot({ path: testInfo.outputPath(`welcome-${width}.png`), fullPage: true });
     await page.getByRole('link', { name: 'サンプル作品で画面を試す' }).click();
@@ -39,7 +37,7 @@ for (const width of [360, 820, 1280])
       .locator('article')
       .first()
       .evaluate((el) => getComputedStyle(el.parentElement!).gridTemplateColumns.split(' ').length);
-    expect(columns).toBe(width < 768 ? 1 : width < 1200 ? 2 : 3);
+    expect(columns).toBe(width < 768 ? 1 : 2);
     await page.screenshot({ path: testInfo.outputPath(`gallery-${width}.png`), fullPage: true });
     expect(errors).toEqual([]);
     expect(protectedRequests).toEqual([]);

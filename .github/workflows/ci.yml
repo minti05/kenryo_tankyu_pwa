@@ -22,5 +22,6 @@ jobs:
       - run: npm run test:pdf
       - run: npm run test:library
       - run: npm run test:discovery
+      - run: npm run test:ux
       - run: npm run test:production
       - run: npm run test:auth-config

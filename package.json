@@ -23,7 +23,8 @@
     "test:pdf": "playwright test --config playwright.pdf.config.ts",
     "test:offline": "playwright test --config playwright.offline.config.ts",
     "test:offline:serve": "node scripts/offline-test-server.mjs",
-    "test:library": "playwright test --config playwright.library.config.ts"
+    "test:library": "playwright test --config playwright.library.config.ts",
+    "test:ux": "playwright test --config playwright.ux.config.ts"
   },
   "dependencies": {
     "@embedpdf/react-pdf-viewer": "2.15.1",

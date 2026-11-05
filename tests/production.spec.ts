@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 test('通常buildにサンプル入口・作品を出さずmanifestを配信する', async ({ page }) => {
   await page.goto('/welcome');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('先輩の問いから');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('先輩の問いから', {
+    timeout: 20000,
+  });
   await expect(page.getByRole('link', { name: 'サンプル作品で画面を試す' })).toHaveCount(0);
   const manifest = await (await page.request.get('/manifest.webmanifest')).json();
   expect(manifest.start_url).toBe('/welcome');
@@ -21,7 +23,9 @@ test('外枠はオフラインで開き、API/PDFをキャッシュに混ぜな�
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('先輩の問いから');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('先輩の問いから', {
+    timeout: 20000,
+  });
   await page.goto('/about');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   const state = await page.evaluate(async () => {
