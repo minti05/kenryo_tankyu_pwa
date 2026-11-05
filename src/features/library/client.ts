@@ -5,6 +5,11 @@ export function operation() {
 export function libraryMessage(error: unknown) {
   const code = error instanceof ApiError ? error.code : '';
   const messages: Record<string, string> = {
+    collection_conflict:
+      '別の画面で変更されています。一覧を読み直しました。閉じてからもう一度お試しください。',
+    collection_not_found: 'コレクションが見つかりません。削除された可能性があります。',
+    collection_limit:
+      '保存数の上限です。コレクションは100個、各コレクションは5,000作品まで保存できます。',
     favorite_conflict:
       '別の画面で変更されました。現在の状態を読み直しました。確認してもう一度操作してください。',
     operation_expired: '操作の有効期限が切れました。画面を読み直してください。',

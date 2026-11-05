@@ -1,0 +1,132 @@
+.picker,
+.createForm {
+  display: grid;
+  gap: 16px;
+}
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.8;
+  margin: 0;
+}
+.choices {
+  display: grid;
+  gap: 8px;
+}
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  min-height: 56px;
+}
+.choice input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  accent-color: var(--accent);
+}
+.choice span,
+.folderOpen span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.choice small,
+.folder small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+  margin-top: 5px;
+}
+.createForm {
+  padding-block: 16px;
+}
+.createForm input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-block: 20px;
+}
+.heading h2 {
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.heading button {
+  flex-shrink: 0;
+}
+.folders {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 14px;
+}
+.folder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  min-width: 0;
+}
+.folderOpen {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 14px 8px;
+  font: inherit;
+  cursor: pointer;
+}
+.folderOpen svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.back,
+.delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  padding: 12px 0;
+  cursor: pointer;
+  min-height: 44px;
+}
+.delete {
+  color: var(--danger, #bf4040);
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.works {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .works {
+    grid-template-columns: 1fr;
+  }
+}

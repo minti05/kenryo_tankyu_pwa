@@ -1,5 +1,5 @@
 import { useRef, useState, useId } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Heart, RotateCcw } from 'lucide-react';
 import type { FavoriteDto } from '../../contracts/library.generated';
 import type { SearchWorkDto } from '../../contracts/discovery.generated';
@@ -7,6 +7,7 @@ import { useAuth } from '../auth/context';
 import { ApiError } from '../../lib/api-client';
 import { cacheFavorite } from './cache';
 import { libraryMessage, retryableIntent } from './client';
+type PendingFavorite = FavoriteDto & { attempt: string };
 export function FavoriteButton({
   work,
   showCount = false,
@@ -39,18 +40,30 @@ export function FavoriteButton({
     queryFn: () => request<FavoriteDto>(`/api/works/${work.documentID}/state`),
     staleTime: 0,
   });
-  const data = snapshot ? (override?.basis === basis ? override.value : snapshot) : state.data;
+  const pendingKey = ['favorite-pending', session?.uid, work.documentID] as const;
+  const pending = useQuery<PendingFavorite | null>({ queryKey: pendingKey, queryFn: skipToken });
+  const confirmed = snapshot ? (override?.basis === basis ? override.value : snapshot) : state.data;
+  const data = pending.data ?? confirmed;
   async function favorite() {
-    if (!data || busy) return;
+    if (!confirmed || busy || query.getQueryData(pendingKey)) return;
+    const data = confirmed;
     const body = { favorite: !data.favorite, expectedRevision: data.revision };
+    const attempt = crypto.randomUUID();
     setBusy(true);
     setMessage('');
     setFailed(false);
+    query.setQueryData<PendingFavorite>(pendingKey, {
+      ...data,
+      favorite: body.favorite,
+      count: Math.max(0, data.count + (body.favorite ? 1 : -1)),
+      attempt,
+    });
     try {
       const updated = await request<FavoriteDto>(`/api/favorites/${work.documentID}`, {
         method: 'PUT',
         body: JSON.stringify({ ...body, ...intent.current({ id: work.documentID, ...body }) }),
       });
+      if (query.getQueryData<PendingFavorite>(pendingKey)?.attempt !== attempt) return;
       setOverride({ basis, value: updated });
       query.setQueryData(['favorite', session?.uid, work.documentID], updated);
       if (session) await cacheFavorite(query, session.uid, work, updated);
@@ -59,11 +72,16 @@ export function FavoriteButton({
     } catch (e) {
       if (e instanceof ApiError && e.code === 'favorite_conflict') {
         const fresh = await state.refetch();
-        if (fresh.data) setOverride({ basis, value: fresh.data });
+        if (fresh.data) {
+          setOverride({ basis, value: fresh.data });
+          if (session) await cacheFavorite(query, session.uid, work, fresh.data);
+        }
       }
       setFailed(true);
       setMessage(libraryMessage(e));
     } finally {
+      if (query.getQueryData<PendingFavorite>(pendingKey)?.attempt === attempt)
+        query.setQueryData(pendingKey, null);
       setBusy(false);
     }
   }
@@ -77,7 +95,8 @@ export function FavoriteButton({
         title={label}
         aria-describedby={showCount ? countId : undefined}
         aria-pressed={data?.favorite ?? false}
-        disabled={busy || offline || !data}
+        disabled={busy || !!pending.data || offline || !data}
+        aria-busy={busy || !!pending.data}
         onClick={() => void favorite()}
       >
         <Heart size={23} strokeWidth={1.7} fill={data?.favorite ? 'currentColor' : 'none'} />

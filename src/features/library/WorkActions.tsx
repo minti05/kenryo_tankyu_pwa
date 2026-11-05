@@ -5,12 +5,20 @@ import { CATEGORY_CATALOG } from '../../contracts/catalog.generated';
 import { useAuth } from '../auth/context';
 import { libraryMessage, retryableIntent } from './client';
 import styles from './LibraryPage.module.css';
-export function WorkActions({ work }: { work: SearchWorkDto }) {
+export function WorkActions({
+  work,
+  initialKind = 'other',
+  initialDocument,
+}: {
+  work: SearchWorkDto;
+  initialKind?: string;
+  initialDocument?: string | undefined;
+}) {
   const { request, offline } = useAuth(),
     intent = useRef(retryableIntent());
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState(''),
-    [kind, setKind] = useState('other'),
+    [kind, setKind] = useState(initialKind),
     [category, setCategory] = useState<string>(work.category1),
     [receipt, setReceipt] = useState('');
   async function report(e: FormEvent<HTMLFormElement>) {
@@ -139,7 +147,12 @@ export function WorkActions({ work }: { work: SearchWorkDto }) {
             <legend>開けない資料（1つ以上）</legend>
             {(['poster', 'slide', 'report', 'thesis'] as const).map((k, i) => (
               <label key={k}>
-                <input type="checkbox" name="kinds" value={k} />
+                <input
+                  type="checkbox"
+                  name="kinds"
+                  value={k}
+                  defaultChecked={initialDocument === k}
+                />
                 {['ポスター', 'スライド', 'レポート', '論文'][i]}
               </label>
             ))}

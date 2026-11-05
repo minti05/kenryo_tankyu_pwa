@@ -1,85 +1,79 @@
+import { CollectionsPanel } from './CollectionsPanel';
+import { LoadMoreButton } from '../../components/LoadMoreButton';
+import { LoadingSkeleton } from '../../components/Loading';
 import { Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { skipToken, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/context';
-import type { LibraryPageDto, HistoryDeletedDto } from '../../contracts/library.generated';
+import type { LibraryPageDto, StatsDto } from '../../contracts/library.generated';
 import { LiveWorkCard } from '../discovery/LiveWorkCard';
-import { libraryMessage, retryableIntent } from './client';
-import { cacheHistoryDelete } from './cache';
+import { libraryMessage } from './client';
+import { LibraryEntry } from './LibraryEntry';
+import { HistoryDeleteDialog } from './HistoryDeleteDialog';
+import type { SearchWorkDto } from '../../contracts/discovery.generated';
+import { cacheLibraryStats, libraryStatsKey } from './cache';
 import { visitStreak } from '../offline/store';
 import styles from './LibraryPage.module.css';
 export default function LibraryPage() {
   const { session, request, offline, cacheSession } = useAuth(),
     query = useQueryClient();
-  const [kind, setKind] = useState<'history' | 'favorites'>('history'),
+  const [kind, setKind] = useState<'history' | 'favorites' | 'collections'>('history'),
     [message, setMessage] = useState(''),
-    [busy, setBusy] = useState(false),
-    [scope, setScope] = useState('all'),
-    [from, setFrom] = useState(''),
-    [to, setTo] = useState(''),
+    [selected, setSelected] = useState<SearchWorkDto | null>(null),
     [streak, setStreak] = useState<number | null>(null);
-  const intent = useRef(retryableIntent());
   const data = useInfiniteQuery({
     queryKey: ['library', session?.uid, kind],
-    enabled: !offline,
+    enabled: !!session && !offline && kind !== 'collections',
     initialPageParam: '',
-    queryFn: ({ pageParam, signal }) =>
-      request<LibraryPageDto>(
+    queryFn: async ({ pageParam, signal }) => {
+      const page = await request<LibraryPageDto>(
         `/api/${kind}${pageParam ? '?cursor=' + encodeURIComponent(pageParam) : ''}`,
         { signal },
-      ),
+      );
+      if (!signal.aborted && session) cacheLibraryStats(query, session.uid, page.stats);
+      return page;
+    },
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
-  const stats = data.data?.pages[0]?.stats;
+  // Both tabs and view/delete responses feed the same account-scoped totals.
+  const { data: stats } = useQuery<StatsDto>({
+    queryKey: libraryStatsKey(session?.uid),
+    queryFn: skipToken,
+    enabled: false,
+    gcTime: 5 * 60_000,
+  });
   useEffect(() => {
     if (cacheSession && stats?.serverTime)
       void visitStreak(cacheSession, stats.serverTime)
         .then(setStreak)
         .catch(() => {});
   }, [cacheSession, stats?.serverTime]);
-  async function remove(id?: string) {
-    if (busy) return;
-    if (
-      !confirm(
-        id
-          ? 'この作品の閲覧履歴とお気に入りを削除します。よろしいですか？'
-          : '閲覧履歴を削除します。お気に入りと端末の保存は残ります。よろしいですか？',
-      )
-    )
-      return;
-    let body: Record<string, unknown> = {};
-    if (!id) {
-      body = { scope };
-      if (scope === 'period') {
-        const start = Date.parse(from + 'T00:00:00+09:00'),
-          end = Date.parse(to + 'T00:00:00+09:00') + 86400000;
-        if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) {
-          setMessage('削除する期間を正しく選んでください。');
-          return;
-        }
-        body = { scope, from: new Date(start).toISOString(), to: new Date(end).toISOString() };
-      }
-    }
-    const path = '/api/history' + (id ? '/' + id : '');
-    setBusy(true);
-    setMessage('');
-    try {
-      const result = await request<HistoryDeletedDto>(path, {
-        method: 'DELETE',
-        body: JSON.stringify({ ...body, ...intent.current({ path, body }) }),
-      });
-      await cacheHistoryDelete(query, session!.uid, id, body, result.stats);
-      intent.current.clear();
-      setMessage('閲覧履歴を削除しました。');
-    } catch (error) {
-      setMessage(libraryMessage(error));
-    } finally {
-      setBusy(false);
-    }
+  const items = [
+    ...new Map(
+      (data.data?.pages ?? [])
+        .flatMap((page) => page.items)
+        .map((item) => [item.work.documentID, item]),
+    ).values(),
+  ].sort((a, b) =>
+    kind === 'history'
+      ? Date.parse(b.viewedAt ?? '') - Date.parse(a.viewedAt ?? '')
+      : b.work.documentID.localeCompare(a.work.documentID),
+  );
+  const groups = new Map<string, typeof items>();
+  for (const item of items) {
+    const day =
+      kind === 'history' && item.viewedAt
+        ? new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo' }).format(
+            new Date(item.viewedAt),
+          )
+        : '';
+    const group = groups.get(day) ?? [];
+    group.push(item);
+    groups.set(day, group);
   }
   return (
     <div className="page-container">
@@ -88,8 +82,8 @@ export default function LibraryPage() {
       </header>
       {offline ? (
         <p role="status">
-          履歴とお気に入りはオンラインで確認できます。
-          <Link to="/account">保存資料はアカウントから開けます</Link>
+          履歴・お気に入り・コレクションはオンラインで確認できます。
+          <Link to="/saved">履歴の管理を開く</Link>
         </p>
       ) : (
         <>
@@ -108,7 +102,7 @@ export default function LibraryPage() {
               </div>
             ))}
           </section>
-          {data.isError && (
+          {data.isError && !stats && (
             <p className={styles.note} role="status">
               閲覧数を取得できませんでした。
             </p>
@@ -124,105 +118,103 @@ export default function LibraryPage() {
             <button aria-pressed={kind === 'favorites'} onClick={() => setKind('favorites')}>
               お気に入り
             </button>
+            <button aria-pressed={kind === 'collections'} onClick={() => setKind('collections')}>
+              コレクション
+            </button>
           </div>
-          {data.isPending && <p role="status">ライブラリを読み込んでいます…</p>}
-          {data.isError && (
-            <div role="alert">
-              <p>{libraryMessage(data.error)}</p>
-              <button className="button secondary" onClick={() => void data.refetch()}>
-                ライブラリを読み直す
-              </button>
-            </div>
-          )}
-          {data.data && (
+          {kind === 'collections' ? (
+            <CollectionsPanel />
+          ) : (
             <>
-              <div className={styles.grid}>
-                {[
-                  ...new Map(
-                    data.data.pages
-                      .flatMap((p) => p.items)
-                      .map((item) => [item.work.documentID, item]),
-                  ).values(),
-                ]
-                  .sort((a, b) =>
-                    kind === 'history'
-                      ? Date.parse(b.viewedAt ?? '') - Date.parse(a.viewedAt ?? '')
-                      : b.work.documentID.localeCompare(a.work.documentID),
-                  )
-                  .map((item) => (
-                    <div className={styles.entry} key={item.work.documentID}>
-                      <LiveWorkCard work={item.work} from="/library" />
-                      <div className={styles.entryTools}>
-                        {item.viewedAt && (
-                          <time>
-                            {new Date(item.viewedAt).toLocaleDateString('ja-JP', {
-                              timeZone: 'Asia/Tokyo',
-                            })}
-                          </time>
-                        )}
-                        {kind === 'history' && (
-                          <button
-                            className="icon-button"
-                            disabled={busy}
-                            onClick={() => void remove(item.work.documentID)}
-                            aria-label={`${item.work.title}の履歴を削除`}
-                          >
-                            <Trash2 size={17} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-              {!data.data.pages.some((p) => p.items.length > 0) && (
-                <p className="empty-state">
-                  {kind === 'history'
-                    ? 'まだ閲覧履歴はありません。PDFを開くと記録されます。'
-                    : 'まだお気に入りはありません。作品の詳細から追加できます。'}
-                </p>
+              {data.isPending && (
+                <LoadingSkeleton
+                  label="ライブラリを読み込み中"
+                  cards
+                  count={6}
+                  className={styles.grid}
+                />
               )}
-              {data.hasNextPage && (
-                <button
-                  className="button secondary"
-                  disabled={data.isFetchingNextPage}
-                  onClick={() => void data.fetchNextPage()}
-                >
-                  さらに表示
-                </button>
+              {data.isError && (
+                <div role="alert">
+                  <p>{libraryMessage(data.error)}</p>
+                  <button className="button secondary" onClick={() => void data.refetch()}>
+                    ライブラリを読み直す
+                  </button>
+                </div>
+              )}
+              {data.data && (
+                <>
+                  {[...groups].map(([day, entries]) => (
+                    <section key={day || 'undated'} className={styles.dayGroup}>
+                      {kind === 'history' && (
+                        <h2 className={styles.dayHeading}>
+                          {day ? (
+                            <time dateTime={day}>
+                              {Number(day.slice(5, 7))}/{Number(day.slice(8, 10))}
+                            </time>
+                          ) : (
+                            '日付不明'
+                          )}
+                        </h2>
+                      )}
+                      <div className={styles.grid}>
+                        {entries.map((item) => (
+                          <LibraryEntry
+                            key={item.work.documentID}
+                            onRemove={() => {
+                              setMessage('');
+                              setSelected(item.work);
+                            }}
+                          >
+                            <LiveWorkCard
+                              work={item.work}
+                              from="/library"
+                              extraAction={
+                                <button
+                                  className={`icon-button ${styles.removeButton}`}
+                                  onClick={() => {
+                                    setMessage('');
+                                    setSelected(item.work);
+                                  }}
+                                  aria-label={`${item.work.title}の履歴を削除`}
+                                >
+                                  <Trash2 size={17} />
+                                </button>
+                              }
+                            />
+                          </LibraryEntry>
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+                  {!data.data.pages.some((p) => p.items.length > 0) && (
+                    <p className="empty-state">
+                      {kind === 'history'
+                        ? 'まだ閲覧履歴はありません。PDFを開くと記録されます。'
+                        : 'まだお気に入りはありません。作品の詳細から追加できます。'}
+                    </p>
+                  )}
+                  {data.hasNextPage && (
+                    <LoadMoreButton
+                      loading={data.isFetchingNextPage}
+                      onClick={() => void data.fetchNextPage()}
+                    />
+                  )}
+                </>
               )}
             </>
           )}
-          {kind === 'history' && (
-            <details className={styles.manage}>
-              <summary>閲覧履歴を整理する</summary>
-              <p>
-                お気に入りと端末に保存した資料は残ります。1作品ずつ削除した場合は、その作品のお気に入りも外れます。
-              </p>
-              <label>
-                削除範囲
-                <select value={scope} onChange={(e) => setScope(e.target.value)}>
-                  <option value="all">すべて</option>
-                  <option value="period">期間を指定</option>
-                </select>
-              </label>
-              {scope === 'period' && (
-                <>
-                  <label>
-                    開始日
-                    <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-                  </label>
-                  <label>
-                    終了日
-                    <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-                  </label>
-                </>
-              )}
-              <button className="button secondary" disabled={busy} onClick={() => void remove()}>
-                閲覧履歴をまとめて削除
-              </button>
-            </details>
-          )}
         </>
+      )}
+      {selected && (
+        <HistoryDeleteDialog
+          work={selected}
+          onClose={() => setSelected(null)}
+          onDeleted={() => {
+            setSelected(null);
+            setMessage('作品をライブラリから削除しました。');
+          }}
+        />
       )}
       {message && <p role="status">{message}</p>}
     </div>
