@@ -664,14 +664,14 @@ for (const [width, height] of [
       await page.getByRole('combobox', { name: '並び順' }).selectOption(sort);
       await expect.poll(() => requests.at(-1)?.searchParams.get('sort')).toBe(sort);
     }
-    await page.evaluate(() => window.scrollTo(0, 700));
     await expect
-      .poll(() =>
-        page.locator('.results-controls').evaluate((element) => {
+      .poll(async () => {
+        await page.evaluate(() => window.scrollTo({ top: 700, behavior: 'instant' }));
+        return page.locator('.results-controls').evaluate((element) => {
           const top = parseFloat(getComputedStyle(element).top);
           return Math.abs(element.getBoundingClientRect().top - top);
-        }),
-      )
+        });
+      })
       .toBeLessThan(2);
     const sticky = await page.locator('.results-controls').boundingBox();
     const header = await page.locator('.site-header').boundingBox();
