@@ -58,9 +58,9 @@ test('検索・分類・種類をURLに保持し、戻る・再読込・条件�
   await expect(page.locator('article')).toHaveCount(1);
   await page.getByRole('button', { name: '条件をクリア' }).click();
   await expect(page.locator('article')).toHaveCount(9);
-  await page.getByRole('button', { name: '地域', exact: true }).click();
+  await page.getByRole('button', { name: '地域・まち', exact: true }).click();
   await expect(page.locator('article')).toHaveCount(1);
-  await expect(page).toHaveURL(/category=society/);
+  await expect(page).toHaveURL(/category=community/);
   await page.getByRole('combobox', { name: '資料の種類' }).selectOption('thesis');
   await expect(page.getByRole('heading', { name: '別の問いから、探してみよう。' })).toBeVisible();
   await page.getByRole('button', { name: 'すべての作品を見る' }).click();
@@ -97,10 +97,10 @@ test('キーボードでskip・検索・分類へ移動できる', async ({ page
 });
 test('iPadの分割表示・向き変更と200%文字でも検索条件を失わない', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
-  await page.goto('/preview/explore?category=science');
+  await page.goto('/preview/explore?category=nature');
   await expect(page.locator('article')).toHaveCount(1);
   await page.setViewportSize({ width: 500, height: 820 });
-  await expect(page.getByRole('button', { name: '数学・理科', exact: true })).toHaveAttribute(
+  await expect(page.getByRole('button', { name: '自然・科学', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
@@ -157,8 +157,8 @@ test('全テーマを展開して横スクロールなしで選べる', async ({
     'aria-expanded',
     'true',
   );
-  await page.getByRole('button', { name: 'その他', exact: true }).click();
-  await expect(page).toHaveURL(/category=other/);
+  await page.getByRole('button', { name: '音楽・美術・デザイン', exact: true }).click();
+  await expect(page).toHaveURL(/category=arts/);
 });
 
 test('ログインしていない場合はアカウント画面に入れない', async ({ page }) => {

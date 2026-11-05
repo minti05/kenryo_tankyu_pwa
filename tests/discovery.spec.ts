@@ -787,10 +787,16 @@ test('更新案内は中央のモーダルで、更新ボタン以外では閉�
       (el) => document.activeElement === document.body || el.contains(document.activeElement),
     ),
   ).toBe(true);
-  const box = await modal.boundingBox();
   const viewport = page.viewportSize()!;
-  expect(Math.abs(box!.x + box!.width / 2 - viewport.width / 2)).toBeLessThan(2);
-  expect(Math.abs(box!.y + box!.height / 2 - viewport.height / 2)).toBeLessThan(2);
+  await expect
+    .poll(async () => {
+      const box = await modal.boundingBox();
+      return Math.max(
+        Math.abs(box!.x + box!.width / 2 - viewport.width / 2),
+        Math.abs(box!.y + box!.height / 2 - viewport.height / 2),
+      );
+    })
+    .toBeLessThan(2);
   await page.screenshot({ path: testInfo.outputPath('version-dialog.png') });
   await button.click();
   await expect(page.locator('body')).toHaveAttribute('data-update-requested', 'true');
