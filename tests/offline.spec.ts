@@ -933,7 +933,7 @@ test.describe('起動時の認証復元', () => {
       await expect(
         page.getByRole('status', { name: 'ログイン状態を確認中', exact: true }),
       ).toBeVisible();
-      await expect(page.locator('img[src="/icons/app-icon.png"]')).toBeVisible();
+      await expect(page.locator('#app-startup svg')).toBeVisible();
       await expect(
         page.getByRole('button', { name: '学校のGoogleアカウントでログイン' }),
       ).toHaveCount(0);
