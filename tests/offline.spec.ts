@@ -109,6 +109,8 @@ test('閲覧した種類だけ保存・完全オフラインの再起動・表�
   expect(before[0]!.kind).toBe('poster');
   await page.goto('/saved');
   await expect(page.getByRole('heading', { name: '履歴の管理', exact: true })).toBeVisible();
+  // Drain requests started online before measuring traffic during the offline restart.
+  await page.waitForLoadState('networkidle');
   const count = (await calls()).length;
   await context.setOffline(true);
   await page.reload();
