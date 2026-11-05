@@ -22,12 +22,24 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
+  browser:
+    name: browser (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [gallery, offline, pdf, library, discovery, ux, production, auth-config]
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22.23.4
+          cache: npm
+      - run: npm ci
       - run: npx playwright install --with-deps chromium webkit
-      - run: npm test
-      - run: npm run test:offline
-      - run: npm run test:pdf
-      - run: npm run test:library
-      - run: npm run test:discovery
-      - run: npm run test:ux
-      - run: npm run test:production
-      - run: npm run test:auth-config
+      - if: matrix.suite == 'production'
+        run: npm run build
+      - if: matrix.suite == 'gallery'
+        run: npm test
+      - if: matrix.suite != 'gallery'
+        run: npm run test:${{ matrix.suite }}

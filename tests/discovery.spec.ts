@@ -665,20 +665,29 @@ for (const [width, height] of [
       await expect.poll(() => requests.at(-1)?.searchParams.get('sort')).toBe(sort);
     }
     await page.evaluate(() => window.scrollTo(0, 700));
+    await expect
+      .poll(() =>
+        page.locator('.results-controls').evaluate((element) => {
+          const top = parseFloat(getComputedStyle(element).top);
+          return Math.abs(element.getBoundingClientRect().top - top);
+        }),
+      )
+      .toBeLessThan(2);
     const sticky = await page.locator('.results-controls').boundingBox();
     const header = await page.locator('.site-header').boundingBox();
-    expect(Math.abs(sticky!.y - header!.height)).toBeLessThan(2);
+    expect(sticky!.y).toBeGreaterThanOrEqual(header!.y + header!.height - 2);
     await page.screenshot({ path: testInfo.outputPath(`results-sticky-${width}.png`) });
     await trigger.click();
     await page.getByRole('button', { name: '条件をクリア', exact: true }).click();
     await expect(page.getByRole('button', { name: 'この条件で検索' })).toBeDisabled();
     await expect(dialog).toBeVisible();
     await page.getByRole('button', { name: 'フィルターを閉じる' }).click();
+    await expect(dialog).not.toBeVisible();
     await expect(page.getByLabel('適用中の検索条件')).toBeVisible();
     await expect(page.getByRole('combobox', { name: '並び順' })).toHaveValue('newest');
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-      true,
-    );
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+      .toBe(true);
     await page.evaluate(() => (document.documentElement.dataset.theme = 'dark'));
     await trigger.click();
     await page.screenshot({
@@ -972,6 +981,11 @@ test('KRGPは条件変更・追加表示・詳細からの復帰で作品を再�
   await expect(page.locator('article')).toHaveCount(22);
   await page.getByLabel('並び順', { exact: true }).selectOption('oldest');
   await page.getByRole('button', { name: 'KRGP 2025 33', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'KRGP 2025 33', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.locator('article')).toHaveCount(33);
   await page.getByLabel('並び順', { exact: true }).selectOption('likes');
   await page.getByRole('link', { name: '架空の水の探究の詳細', exact: true }).click();
   await page.getByRole('link', { name: '一覧へ戻る', exact: true }).click();
