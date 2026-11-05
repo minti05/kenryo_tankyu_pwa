@@ -1,6 +1,8 @@
 // Generated public contract. Update through its owner; do not edit by hand.
-import { CATEGORY_CATALOG as TAXONOMY } from './catalog.generated';
+import { CATEGORY_CATALOG as TAXONOMY, LEGACY_CATEGORY_CATALOG as LEGACY_TAXONOMY } from './catalog.generated';
 const DOCUMENT_TYPES = ['slide', 'report', 'poster', 'thesis'] as const;
+export const PAGE_SIZE = 40;
+
 export function normalizeSearch(text: string): string {
   return text.normalize("NFKC").toLowerCase().replace(/\s+/gu, " ").trim();
 }
@@ -47,8 +49,9 @@ export function parseSearch(params: URLSearchParams): SearchQuery {
     award = params.get("award") ?? "",
     awardName = normalizeSearch(params.get("awardName") ?? ""),
     sort = params.get("sort") ?? "likes",
-    limit = Number(params.get("limit") ?? "20");
-  const c = TAXONOMY.find((x) => x.id === category);
+    limit = Number(params.get("limit") ?? PAGE_SIZE);
+  const candidates = [...TAXONOMY, ...LEGACY_TAXONOMY].filter((x) => x.id === category);
+  const c = candidates.find(x => !subcategory || x.subcategories.some(s => s.id === subcategory));
   if (params.has("awardsOnly") && params.get("awardsOnly") !== "1")
     throw new Error("invalid_search");
   if (

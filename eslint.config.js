@@ -11,6 +11,7 @@ export default tseslint.config(
       '.cache/**',
       'playwright-report/**',
       'test-results/**',
+      'test-results*/**',
       'test-results-pdf/**',
       'test-results-offline/**',
       'public/pdfjs/**',

@@ -2,13 +2,14 @@
   "version": "1",
   "files": {
     "session.generated.ts": "daedecd883c3d882166fd32ceda0440f0a1857cb6546d7678036f2bad2e65efa",
-    "work.generated.ts": "89b97be7f1dcfda77a68e21261863809babf182b2b1d035d67e46a5445c10eec",
-    "catalog.generated.ts": "3b6f370411bcd3e670a1a2d497c967bff90e47ec909f431f16b2e447139ed79d",
-    "query.generated.ts": "853a5fac16e920eac62bfbe9222da8c946a1608269ab4fc4467e550342adaa81",
+    "work.generated.ts": "2ac3d782b1256c834ac878d72df11e8a8a7de1664818b871244182feced0d24b",
+    "catalog.generated.ts": "cd6f4d9abe9d21f63548ffc5fb61225fe76c7f1e639513e81f4b08cc33cd15c7",
+    "query.generated.ts": "3af06fca3c1424fee2164458c6bb48c639309b9968019811a315596b6548f27c",
     "access.generated.ts": "ab89616a23338e11cdf9f7ebce7f897ec9352f753b589200ec94a733b5a44248",
-    "condition-suggestions.generated.ts": "1248a651f77f55e718d24eb7c357ee5b5c34fde2a05b020001c39677a010e5a0",
-    "discovery.generated.ts": "6439d9f1028570a4b589842f03ff5014b81540995620a60f1e27f5791f78f2aa",
-    "documents.generated.ts": "c35305214db535340f3450971c3864cd06f51085b4b151b71f832821de11d02f",
+    "condition-suggestions.generated.ts": "3de544ad3292a12c10df57a166b30c0e7c67d429547b309b651720cebf199b65",
+    "reading-tips.generated.ts": "ac1ca10888dcfe5d55f67e284b222391c5fbf167782c237710c3145e3ad93613",
+    "discovery.generated.ts": "8c16c262ae08214441ee4564372aa0100bc4a9f7feb1d66472c630b3fc568ea7",
+    "documents.generated.ts": "cfa069de6311f8e61ee8aeb87d8f092f2cc84dae64aa1ce9ab54523f725d2eba",
     "library.generated.ts": "c01229cc4425a090bec0e26d6b71e85bc382eabb01b837b66dd5515401218384",
     "notifications.generated.ts": "c2460e4dbd45ea30a0cc280a134e5d15c64a1ad68195fb73014a0d60e64440ef"
   }

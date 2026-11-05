@@ -34,7 +34,7 @@ export function conditionSuggestions(
     });
   }
   for (const category of TAXONOMY) {
-    add(`カテゴリ「${category.label}」`, [category.label], {
+    add(`カテゴリ「${category.label}」`, [category.label, ...category.label.split("・")], {
       category: category.id,
     });
     for (const sub of category.subcategories)
