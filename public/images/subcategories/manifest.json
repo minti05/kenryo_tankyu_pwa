@@ -1,0 +1,844 @@
+{
+  "version": 2,
+  "icons": [
+    {
+      "category": "community",
+      "subcategory": "community-01",
+      "label": "交通・移動",
+      "color": "#d83d00",
+      "url": "/images/subcategories/community-01.svg"
+    },
+    {
+      "category": "community",
+      "subcategory": "community-02",
+      "label": "防災・減災",
+      "color": "#d83d00",
+      "url": "/images/subcategories/community-02.svg"
+    },
+    {
+      "category": "community",
+      "subcategory": "community-03",
+      "label": "観光",
+      "color": "#d83d00",
+      "url": "/images/subcategories/community-03.svg"
+    },
+    {
+      "category": "community",
+      "subcategory": "community-04",
+      "label": "公共空間・居場所",
+      "color": "#d83d00",
+      "url": "/images/subcategories/community-04.svg"
+    },
+    {
+      "category": "community",
+      "subcategory": "community-05",
+      "label": "地域活動・地域振興",
+      "color": "#d83d00",
+      "url": "/images/subcategories/community-05.svg"
+    },
+    {
+      "category": "community",
+      "subcategory": "community-06",
+      "label": "景観・土地利用",
+      "color": "#d83d00",
+      "url": "/images/subcategories/community-06.svg"
+    },
+    {
+      "category": "community",
+      "subcategory": "community-urban-living",
+      "label": "都市・住みやすさ",
+      "color": "#d83d00",
+      "url": "/images/subcategories/community-urban-living.svg"
+    },
+    {
+      "category": "community",
+      "subcategory": "community-crime-prevention",
+      "label": "防犯・犯罪予防",
+      "color": "#d83d00",
+      "url": "/images/subcategories/community-crime-prevention.svg"
+    },
+    {
+      "category": "humanities",
+      "subcategory": "humanities-01",
+      "label": "歴史",
+      "color": "#d88c00",
+      "url": "/images/subcategories/humanities-01.svg"
+    },
+    {
+      "category": "humanities",
+      "subcategory": "humanities-02",
+      "label": "日本語・ことば",
+      "color": "#d88c00",
+      "url": "/images/subcategories/humanities-02.svg"
+    },
+    {
+      "category": "humanities",
+      "subcategory": "humanities-03",
+      "label": "外国語・翻訳",
+      "color": "#d88c00",
+      "url": "/images/subcategories/humanities-03.svg"
+    },
+    {
+      "category": "humanities",
+      "subcategory": "humanities-04",
+      "label": "哲学・倫理",
+      "color": "#d88c00",
+      "url": "/images/subcategories/humanities-04.svg"
+    },
+    {
+      "category": "humanities",
+      "subcategory": "humanities-05",
+      "label": "宗教・信仰",
+      "color": "#d88c00",
+      "url": "/images/subcategories/humanities-05.svg"
+    },
+    {
+      "category": "humanities",
+      "subcategory": "humanities-06",
+      "label": "民俗・伝統文化",
+      "color": "#d88c00",
+      "url": "/images/subcategories/humanities-06.svg"
+    },
+    {
+      "category": "society",
+      "subcategory": "society-01",
+      "label": "政治・行政",
+      "color": "#492256",
+      "url": "/images/subcategories/society-01.svg",
+      "themeUrls": {
+        "dark": "/images/subcategories/dark/society-01.svg"
+      },
+      "themeColors": {
+        "dark": "#c58cdd"
+      }
+    },
+    {
+      "category": "society",
+      "subcategory": "society-02",
+      "label": "法律・司法",
+      "color": "#492256",
+      "url": "/images/subcategories/society-02.svg",
+      "themeUrls": {
+        "dark": "/images/subcategories/dark/society-02.svg"
+      },
+      "themeColors": {
+        "dark": "#c58cdd"
+      }
+    },
+    {
+      "category": "society",
+      "subcategory": "society-03",
+      "label": "人権・多文化共生",
+      "color": "#492256",
+      "url": "/images/subcategories/society-03.svg",
+      "themeUrls": {
+        "dark": "/images/subcategories/dark/society-03.svg"
+      },
+      "themeColors": {
+        "dark": "#c58cdd"
+      }
+    },
+    {
+      "category": "society",
+      "subcategory": "society-04",
+      "label": "福祉・生活支援",
+      "color": "#492256",
+      "url": "/images/subcategories/society-04.svg",
+      "themeUrls": {
+        "dark": "/images/subcategories/dark/society-04.svg"
+      },
+      "themeColors": {
+        "dark": "#c58cdd"
+      }
+    },
+    {
+      "category": "society",
+      "subcategory": "society-05",
+      "label": "ジェンダー・性の多様性",
+      "color": "#492256",
+      "url": "/images/subcategories/society-05.svg",
+      "themeUrls": {
+        "dark": "/images/subcategories/dark/society-05.svg"
+      },
+      "themeColors": {
+        "dark": "#c58cdd"
+      }
+    },
+    {
+      "category": "society",
+      "subcategory": "society-06",
+      "label": "戦争・平和",
+      "color": "#492256",
+      "url": "/images/subcategories/society-06.svg",
+      "themeUrls": {
+        "dark": "/images/subcategories/dark/society-06.svg"
+      },
+      "themeColors": {
+        "dark": "#c58cdd"
+      }
+    },
+    {
+      "category": "society",
+      "subcategory": "society-07",
+      "label": "国際関係・国際協力",
+      "color": "#492256",
+      "url": "/images/subcategories/society-07.svg",
+      "themeUrls": {
+        "dark": "/images/subcategories/dark/society-07.svg"
+      },
+      "themeColors": {
+        "dark": "#c58cdd"
+      }
+    },
+    {
+      "category": "economy",
+      "subcategory": "economy-01",
+      "label": "消費・購買",
+      "color": "#00d89e",
+      "url": "/images/subcategories/economy-01.svg"
+    },
+    {
+      "category": "economy",
+      "subcategory": "economy-02",
+      "label": "広告・マーケティング",
+      "color": "#00d89e",
+      "url": "/images/subcategories/economy-02.svg"
+    },
+    {
+      "category": "economy",
+      "subcategory": "economy-03",
+      "label": "企業・経営・起業",
+      "color": "#00d89e",
+      "url": "/images/subcategories/economy-03.svg"
+    },
+    {
+      "category": "economy",
+      "subcategory": "economy-04",
+      "label": "金融・お金",
+      "color": "#00d89e",
+      "url": "/images/subcategories/economy-04.svg"
+    },
+    {
+      "category": "economy",
+      "subcategory": "economy-05",
+      "label": "仕事・働き方",
+      "color": "#00d89e",
+      "url": "/images/subcategories/economy-05.svg"
+    },
+    {
+      "category": "economy",
+      "subcategory": "economy-08",
+      "label": "経済のしくみ",
+      "color": "#00d89e",
+      "url": "/images/subcategories/economy-08.svg"
+    },
+    {
+      "category": "environment",
+      "subcategory": "environment-01",
+      "label": "気候変動",
+      "color": "#00d827",
+      "url": "/images/subcategories/environment-01.svg"
+    },
+    {
+      "category": "environment",
+      "subcategory": "environment-02",
+      "label": "環境汚染",
+      "color": "#00d827",
+      "url": "/images/subcategories/environment-02.svg"
+    },
+    {
+      "category": "environment",
+      "subcategory": "environment-03",
+      "label": "ごみ・食品ロス",
+      "color": "#00d827",
+      "url": "/images/subcategories/environment-03.svg"
+    },
+    {
+      "category": "environment",
+      "subcategory": "environment-04",
+      "label": "再利用・リサイクル",
+      "color": "#00d827",
+      "url": "/images/subcategories/environment-04.svg"
+    },
+    {
+      "category": "environment",
+      "subcategory": "environment-05",
+      "label": "自然保護・生物多様性",
+      "color": "#00d827",
+      "url": "/images/subcategories/environment-05.svg"
+    },
+    {
+      "category": "environment",
+      "subcategory": "environment-06",
+      "label": "資源・エネルギー",
+      "color": "#00d827",
+      "url": "/images/subcategories/environment-06.svg"
+    },
+    {
+      "category": "agriculture",
+      "subcategory": "agriculture-01",
+      "label": "栽培・生育",
+      "color": "#b1d800",
+      "url": "/images/subcategories/agriculture-01.svg"
+    },
+    {
+      "category": "agriculture",
+      "subcategory": "agriculture-02",
+      "label": "土・肥料",
+      "color": "#b1d800",
+      "url": "/images/subcategories/agriculture-02.svg"
+    },
+    {
+      "category": "agriculture",
+      "subcategory": "agriculture-03",
+      "label": "病害虫・除草・獣害",
+      "color": "#b1d800",
+      "url": "/images/subcategories/agriculture-03.svg"
+    },
+    {
+      "category": "agriculture",
+      "subcategory": "agriculture-04",
+      "label": "畜産",
+      "color": "#b1d800",
+      "url": "/images/subcategories/agriculture-04.svg"
+    },
+    {
+      "category": "agriculture",
+      "subcategory": "agriculture-05",
+      "label": "森林・林業",
+      "color": "#b1d800",
+      "url": "/images/subcategories/agriculture-05.svg"
+    },
+    {
+      "category": "agriculture",
+      "subcategory": "agriculture-06",
+      "label": "漁業・養殖",
+      "color": "#b1d800",
+      "url": "/images/subcategories/agriculture-06.svg"
+    },
+    {
+      "category": "agriculture",
+      "subcategory": "agriculture-07",
+      "label": "収穫・流通",
+      "color": "#b1d800",
+      "url": "/images/subcategories/agriculture-07.svg"
+    },
+    {
+      "category": "nature",
+      "subcategory": "nature-01",
+      "label": "数学",
+      "color": "#0070d8",
+      "url": "/images/subcategories/nature-01.svg"
+    },
+    {
+      "category": "nature",
+      "subcategory": "nature-02",
+      "label": "物理",
+      "color": "#0070d8",
+      "url": "/images/subcategories/nature-02.svg"
+    },
+    {
+      "category": "nature",
+      "subcategory": "nature-03",
+      "label": "化学",
+      "color": "#0070d8",
+      "url": "/images/subcategories/nature-03.svg"
+    },
+    {
+      "category": "nature",
+      "subcategory": "nature-04",
+      "label": "生物",
+      "color": "#0070d8",
+      "url": "/images/subcategories/nature-04.svg"
+    },
+    {
+      "category": "nature",
+      "subcategory": "nature-05",
+      "label": "地球・地質",
+      "color": "#0070d8",
+      "url": "/images/subcategories/nature-05.svg"
+    },
+    {
+      "category": "nature",
+      "subcategory": "nature-06",
+      "label": "気象",
+      "color": "#0070d8",
+      "url": "/images/subcategories/nature-06.svg"
+    },
+    {
+      "category": "nature",
+      "subcategory": "nature-07",
+      "label": "宇宙",
+      "color": "#0070d8",
+      "url": "/images/subcategories/nature-07.svg"
+    },
+    {
+      "category": "technology",
+      "subcategory": "technology-01",
+      "label": "AI",
+      "color": "#00d8cd",
+      "url": "/images/subcategories/technology-01.svg"
+    },
+    {
+      "category": "technology",
+      "subcategory": "technology-02",
+      "label": "ソフトウェア・アプリ",
+      "color": "#00d8cd",
+      "url": "/images/subcategories/technology-02.svg"
+    },
+    {
+      "category": "technology",
+      "subcategory": "technology-03",
+      "label": "情報セキュリティ",
+      "color": "#00d8cd",
+      "url": "/images/subcategories/technology-03.svg"
+    },
+    {
+      "category": "technology",
+      "subcategory": "technology-04",
+      "label": "電子工作・センサー・ロボット",
+      "color": "#00d8cd",
+      "url": "/images/subcategories/technology-04.svg"
+    },
+    {
+      "category": "technology",
+      "subcategory": "technology-05",
+      "label": "材料・製品設計",
+      "color": "#00d8cd",
+      "url": "/images/subcategories/technology-05.svg"
+    },
+    {
+      "category": "technology",
+      "subcategory": "technology-06",
+      "label": "建築・構造",
+      "color": "#00d8cd",
+      "url": "/images/subcategories/technology-06.svg"
+    },
+    {
+      "category": "technology",
+      "subcategory": "technology-07",
+      "label": "エネルギー技術",
+      "color": "#00d8cd",
+      "url": "/images/subcategories/technology-07.svg"
+    },
+    {
+      "category": "technology",
+      "subcategory": "technology-08",
+      "label": "データ処理・可視化",
+      "color": "#00d8cd",
+      "url": "/images/subcategories/technology-08.svg"
+    },
+    {
+      "category": "technology",
+      "subcategory": "technology-09",
+      "label": "通信・ネットワーク",
+      "color": "#00d8cd",
+      "url": "/images/subcategories/technology-09.svg"
+    },
+    {
+      "category": "technology",
+      "subcategory": "technology-10",
+      "label": "情報の信頼性・利用",
+      "color": "#00d8cd",
+      "url": "/images/subcategories/technology-10.svg"
+    },
+    {
+      "category": "education",
+      "subcategory": "education-01",
+      "label": "学習・勉強法",
+      "color": "#d80041",
+      "url": "/images/subcategories/education-01.svg"
+    },
+    {
+      "category": "education",
+      "subcategory": "education-02",
+      "label": "授業・教材",
+      "color": "#d80041",
+      "url": "/images/subcategories/education-02.svg"
+    },
+    {
+      "category": "education",
+      "subcategory": "education-03",
+      "label": "学校生活・校則",
+      "color": "#d80041",
+      "url": "/images/subcategories/education-03.svg"
+    },
+    {
+      "category": "education",
+      "subcategory": "education-04",
+      "label": "部活動・学校行事",
+      "color": "#d80041",
+      "url": "/images/subcategories/education-04.svg"
+    },
+    {
+      "category": "education",
+      "subcategory": "education-05",
+      "label": "進路・教育制度",
+      "color": "#d80041",
+      "url": "/images/subcategories/education-05.svg"
+    },
+    {
+      "category": "education",
+      "subcategory": "education-06",
+      "label": "幼児教育・保育",
+      "color": "#d80041",
+      "url": "/images/subcategories/education-06.svg"
+    },
+    {
+      "category": "sports",
+      "subcategory": "sports-01",
+      "label": "競技・ルール・戦術",
+      "color": "#d80000",
+      "url": "/images/subcategories/sports-01.svg"
+    },
+    {
+      "category": "sports",
+      "subcategory": "sports-02",
+      "label": "動作・フォーム",
+      "color": "#d80000",
+      "url": "/images/subcategories/sports-02.svg"
+    },
+    {
+      "category": "sports",
+      "subcategory": "sports-03",
+      "label": "体力・トレーニング",
+      "color": "#d80000",
+      "url": "/images/subcategories/sports-03.svg"
+    },
+    {
+      "category": "sports",
+      "subcategory": "sports-04",
+      "label": "用具・競技環境",
+      "color": "#d80000",
+      "url": "/images/subcategories/sports-04.svg"
+    },
+    {
+      "category": "sports",
+      "subcategory": "sports-05",
+      "label": "参加・運営",
+      "color": "#d80000",
+      "url": "/images/subcategories/sports-05.svg"
+    },
+    {
+      "category": "food_life",
+      "subcategory": "food_life-01",
+      "label": "食材・調理",
+      "color": "#d4d800",
+      "url": "/images/subcategories/food_life-01.svg",
+      "themeUrls": {
+        "light": "/images/subcategories/light/food_life-01.svg"
+      },
+      "themeColors": {
+        "light": "#807d00"
+      }
+    },
+    {
+      "category": "food_life",
+      "subcategory": "food_life-02",
+      "label": "衣服・ファッション",
+      "color": "#d4d800",
+      "url": "/images/subcategories/food_life-02.svg",
+      "themeUrls": {
+        "light": "/images/subcategories/light/food_life-02.svg"
+      },
+      "themeColors": {
+        "light": "#807d00"
+      }
+    },
+    {
+      "category": "food_life",
+      "subcategory": "food_life-03",
+      "label": "住まい",
+      "color": "#d4d800",
+      "url": "/images/subcategories/food_life-03.svg",
+      "themeUrls": {
+        "light": "/images/subcategories/light/food_life-03.svg"
+      },
+      "themeColors": {
+        "light": "#807d00"
+      }
+    },
+    {
+      "category": "food_life",
+      "subcategory": "food_life-04",
+      "label": "家事・生活の工夫",
+      "color": "#d4d800",
+      "url": "/images/subcategories/food_life-04.svg",
+      "themeUrls": {
+        "light": "/images/subcategories/light/food_life-04.svg"
+      },
+      "themeColors": {
+        "light": "#807d00"
+      }
+    },
+    {
+      "category": "food_life",
+      "subcategory": "food_life-05",
+      "label": "ペット・動物との共生",
+      "color": "#d4d800",
+      "url": "/images/subcategories/food_life-05.svg",
+      "themeUrls": {
+        "light": "/images/subcategories/light/food_life-05.svg"
+      },
+      "themeColors": {
+        "light": "#807d00"
+      }
+    },
+    {
+      "category": "food_life",
+      "subcategory": "food_life-07",
+      "label": "食品加工・保存",
+      "color": "#d4d800",
+      "url": "/images/subcategories/food_life-07.svg",
+      "themeUrls": {
+        "light": "/images/subcategories/light/food_life-07.svg"
+      },
+      "themeColors": {
+        "light": "#807d00"
+      }
+    },
+    {
+      "category": "food_life",
+      "subcategory": "food_life-08",
+      "label": "味・香り・食感",
+      "color": "#d4d800",
+      "url": "/images/subcategories/food_life-08.svg",
+      "themeUrls": {
+        "light": "/images/subcategories/light/food_life-08.svg"
+      },
+      "themeColors": {
+        "light": "#807d00"
+      }
+    },
+    {
+      "category": "food_life",
+      "subcategory": "food_life-09",
+      "label": "食文化・食習慣",
+      "color": "#d4d800",
+      "url": "/images/subcategories/food_life-09.svg",
+      "themeUrls": {
+        "light": "/images/subcategories/light/food_life-09.svg"
+      },
+      "themeColors": {
+        "light": "#807d00"
+      }
+    },
+    {
+      "category": "mind_body",
+      "subcategory": "mind_body-01",
+      "label": "心理・感情",
+      "color": "#d80089",
+      "url": "/images/subcategories/mind_body-01.svg"
+    },
+    {
+      "category": "mind_body",
+      "subcategory": "mind_body-02",
+      "label": "記憶・集中",
+      "color": "#d80089",
+      "url": "/images/subcategories/mind_body-02.svg"
+    },
+    {
+      "category": "mind_body",
+      "subcategory": "mind_body-03",
+      "label": "人間関係・恋愛",
+      "color": "#d80089",
+      "url": "/images/subcategories/mind_body-03.svg"
+    },
+    {
+      "category": "mind_body",
+      "subcategory": "mind_body-04",
+      "label": "睡眠",
+      "color": "#d80089",
+      "url": "/images/subcategories/mind_body-04.svg"
+    },
+    {
+      "category": "mind_body",
+      "subcategory": "mind_body-nutrition",
+      "label": "栄養・食生活",
+      "color": "#d80089",
+      "url": "/images/subcategories/mind_body-nutrition.svg"
+    },
+    {
+      "category": "mind_body",
+      "subcategory": "mind_body-body-care",
+      "label": "疲労・身体ケア",
+      "color": "#d80089",
+      "url": "/images/subcategories/mind_body-body-care.svg"
+    },
+    {
+      "category": "mind_body",
+      "subcategory": "mind_body-vision",
+      "label": "視力・目の健康",
+      "color": "#d80089",
+      "url": "/images/subcategories/mind_body-vision.svg"
+    },
+    {
+      "category": "mind_body",
+      "subcategory": "mind_body-06",
+      "label": "医療",
+      "color": "#d80089",
+      "url": "/images/subcategories/mind_body-06.svg"
+    },
+    {
+      "category": "mind_body",
+      "subcategory": "mind_body-07",
+      "label": "美容",
+      "color": "#d80089",
+      "url": "/images/subcategories/mind_body-07.svg"
+    },
+    {
+      "category": "mind_body",
+      "subcategory": "mind_body-08",
+      "label": "意欲・習慣",
+      "color": "#d80089",
+      "url": "/images/subcategories/mind_body-08.svg"
+    },
+    {
+      "category": "mind_body",
+      "subcategory": "mind_body-09",
+      "label": "こころの健康",
+      "color": "#d80089",
+      "url": "/images/subcategories/mind_body-09.svg"
+    },
+    {
+      "category": "mind_body",
+      "subcategory": "mind_body-growth",
+      "label": "身体の成長・発達",
+      "color": "#d80089",
+      "url": "/images/subcategories/mind_body-growth.svg"
+    },
+    {
+      "category": "entertainment",
+      "subcategory": "entertainment-music-culture",
+      "label": "楽曲・歌詞・音楽文化",
+      "color": "#7b00d8",
+      "url": "/images/subcategories/entertainment-music-culture.svg"
+    },
+    {
+      "category": "entertainment",
+      "subcategory": "entertainment-literature",
+      "label": "文学・読書",
+      "color": "#7b00d8",
+      "url": "/images/subcategories/entertainment-literature.svg"
+    },
+    {
+      "category": "entertainment",
+      "subcategory": "entertainment-screen",
+      "label": "映画・映像",
+      "color": "#7b00d8",
+      "url": "/images/subcategories/entertainment-screen.svg"
+    },
+    {
+      "category": "entertainment",
+      "subcategory": "entertainment-stage",
+      "label": "演劇・ダンス",
+      "color": "#7b00d8",
+      "url": "/images/subcategories/entertainment-stage.svg"
+    },
+    {
+      "category": "entertainment",
+      "subcategory": "entertainment-character",
+      "label": "マンガ・アニメ・キャラクター",
+      "color": "#7b00d8",
+      "url": "/images/subcategories/entertainment-character.svg"
+    },
+    {
+      "category": "entertainment",
+      "subcategory": "entertainment-games",
+      "label": "ゲーム・遊び",
+      "color": "#7b00d8",
+      "url": "/images/subcategories/entertainment-games.svg"
+    },
+    {
+      "category": "entertainment",
+      "subcategory": "entertainment-media",
+      "label": "メディア・SNS文化",
+      "color": "#7b00d8",
+      "url": "/images/subcategories/entertainment-media.svg"
+    },
+    {
+      "category": "entertainment",
+      "subcategory": "entertainment-fandom",
+      "label": "オタク・推し活・サブカル",
+      "color": "#7b00d8",
+      "url": "/images/subcategories/entertainment-fandom.svg"
+    },
+    {
+      "category": "entertainment",
+      "subcategory": "entertainment-leisure",
+      "label": "趣味・レジャー",
+      "color": "#7b00d8",
+      "url": "/images/subcategories/entertainment-leisure.svg"
+    },
+    {
+      "category": "entertainment",
+      "subcategory": "entertainment-comedy",
+      "label": "お笑い・ユーモア・演芸",
+      "color": "#7b00d8",
+      "url": "/images/subcategories/entertainment-comedy.svg"
+    },
+    {
+      "category": "arts",
+      "subcategory": "arts-composition",
+      "label": "作曲・音楽表現",
+      "color": "#d85e00",
+      "url": "/images/subcategories/arts-composition.svg"
+    },
+    {
+      "category": "arts",
+      "subcategory": "arts-performance",
+      "label": "演奏・楽器",
+      "color": "#d85e00",
+      "url": "/images/subcategories/arts-performance.svg"
+    },
+    {
+      "category": "arts",
+      "subcategory": "arts-music-use",
+      "label": "音楽の活用",
+      "color": "#d85e00",
+      "url": "/images/subcategories/arts-music-use.svg"
+    },
+    {
+      "category": "arts",
+      "subcategory": "arts-drawing",
+      "label": "絵画・イラスト",
+      "color": "#d85e00",
+      "url": "/images/subcategories/arts-drawing.svg"
+    },
+    {
+      "category": "arts",
+      "subcategory": "arts-appreciation",
+      "label": "美術史・作品鑑賞",
+      "color": "#d85e00",
+      "url": "/images/subcategories/arts-appreciation.svg"
+    },
+    {
+      "category": "arts",
+      "subcategory": "arts-color",
+      "label": "色彩・配色",
+      "color": "#d85e00",
+      "url": "/images/subcategories/arts-color.svg"
+    },
+    {
+      "category": "arts",
+      "subcategory": "arts-information-design",
+      "label": "文字・レイアウト・情報表現",
+      "color": "#d85e00",
+      "url": "/images/subcategories/arts-information-design.svg"
+    },
+    {
+      "category": "arts",
+      "subcategory": "arts-photography",
+      "label": "写真・撮影表現",
+      "color": "#d85e00",
+      "url": "/images/subcategories/arts-photography.svg"
+    },
+    {
+      "category": "arts",
+      "subcategory": "arts-craft",
+      "label": "工芸・立体造形",
+      "color": "#d85e00",
+      "url": "/images/subcategories/arts-craft.svg"
+    }
+  ]
+}
