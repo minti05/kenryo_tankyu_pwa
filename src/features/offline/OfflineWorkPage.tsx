@@ -1,3 +1,5 @@
+import { PdfLoading } from '../../components/PdfLoading';
+import styles from '../works/WorkPage.module.css';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/context';
@@ -21,6 +23,7 @@ export default function OfflineWorkPage() {
     [data, setData] = useState<(CachedPdf & { url: string }) | null>(null),
     [checking, setChecking] = useState(true),
     [error, setError] = useState('');
+  const [viewerState, setViewerState] = useState<Blob | null>(null);
   const kind = params.get('kind') ?? rows[0]?.kind;
   useEffect(() => {
     let closed = false,
@@ -92,11 +95,7 @@ export default function OfflineWorkPage() {
     return (
       <div className="page-container">
         <h1>保存した資料</h1>
-        {checking ? (
-          <p role="status">期限と保存資料を確認しています…</p>
-        ) : (
-          <p role="alert">{error}</p>
-        )}
+        <p role="alert">{error}</p>
       </div>
     );
   return (
@@ -116,13 +115,19 @@ export default function OfflineWorkPage() {
         setParams(next, { replace: true });
       }}
     >
-      <Suspense fallback={<p role="status">PDF表示を準備しています…</p>}>
-        {data && cacheSession ? (
-          <Viewer blob={data.blob} onReady={() => {}} />
-        ) : (
-          <p role="status">期限と保存資料を確認しています…</p>
-        )}
-      </Suspense>
+      <div className={styles.pdfStage}>
+        <Suspense fallback={null}>
+          {data && cacheSession ? (
+            <Viewer
+              blob={data.blob}
+              loading={null}
+              onReady={() => setViewerState(data.blob)}
+              onError={() => setViewerState(data.blob)}
+            />
+          ) : null}
+        </Suspense>
+        {(!data || viewerState !== data.blob) && <PdfLoading key={`${id}:${kind}`} />}
+      </div>
     </WorkReader>
   );
 }

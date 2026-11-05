@@ -77,14 +77,6 @@
   color: var(--accent);
   font-size: 0.6875rem;
 }
-.note {
-  margin: 20px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 0.6875rem;
-  line-height: 1.7;
-}
 @media (max-width: 899px), (max-width: 1199px) and (orientation: portrait) {
   .heading {
     margin-bottom: 22px;

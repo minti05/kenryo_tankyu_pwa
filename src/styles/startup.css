@@ -1,0 +1,31 @@
+.startup-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--canvas, #f7f5f0);
+  color: var(--text, #282320);
+}
+.startup-screen[hidden] {
+  display: none;
+}
+:root[data-theme='dark'] .startup-screen {
+  background: var(--canvas, #181716);
+  color: var(--text, #f3eee8);
+}
+.startup-screen > svg,
+.startup-screen > img {
+  width: 104px;
+  height: 104px;
+}
+.startup-screen > p {
+  margin: 24px 0 0;
+  font-family: system-ui, sans-serif;
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+}

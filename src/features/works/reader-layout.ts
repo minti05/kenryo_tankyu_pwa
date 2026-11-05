@@ -12,3 +12,16 @@ export function useDesktopReader() {
     () => false,
   );
 }
+
+const wideQuery = '(min-width: 1440px) and (orientation: landscape)';
+export function useWideReader() {
+  return useSyncExternalStore(
+    (notify) => {
+      const m = matchMedia(wideQuery);
+      m.addEventListener('change', notify);
+      return () => m.removeEventListener('change', notify);
+    },
+    () => matchMedia(wideQuery).matches,
+    () => false,
+  );
+}

@@ -1,9 +1,15 @@
-export function fixturePdf(japanese = false) {
+export function fixturePdf(
+  japanese = false,
+  pageSizes = [
+    [300, 420],
+    [420, 300],
+  ],
+) {
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 420] /Resources << /Font << /F1 5 0 R >> >> /Contents 6 0 R >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 420 300] /Resources << /Font << /F1 5 0 R >> >> /Contents 7 0 R >>',
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageSizes[0][0]} ${pageSizes[0][1]}] /Resources << /Font << /F1 5 0 R >> >> /Contents 6 0 R >>`,
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageSizes[1][0]} ${pageSizes[1][1]}] /Resources << /Font << /F1 5 0 R >> >> /Contents 7 0 R >>`,
     japanese
       ? '<< /Type /Font /Subtype /Type0 /BaseFont /HeiseiKakuGo-W5 /Encoding /UniJIS-UCS2-H /DescendantFonts [8 0 R] >>'
       : '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',

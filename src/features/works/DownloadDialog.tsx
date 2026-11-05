@@ -1,3 +1,4 @@
+import { LoadingIndicator } from '../../components/Loading';
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Download, ShieldCheck } from 'lucide-react';
 import { Modal } from '../../components/Modal';
@@ -240,7 +241,7 @@ export function DownloadDialog({
           disabled={busy || !selected.length}
           onClick={() => void prepare()}
         >
-          {busy ? '資料を確認しています…' : '同意して進む'}
+          {busy ? <LoadingIndicator inline label="資料を確認中" /> : '同意して進む'}
         </button>
       )}
     </Modal>

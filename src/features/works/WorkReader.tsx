@@ -1,16 +1,31 @@
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { RelatedWorks } from './RelatedWorks';
+import { Modal } from '../../components/Modal';
+import { WorkActions } from '../library/WorkActions';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+  type CSSProperties,
+} from 'react';
 import { Search, Maximize, Minimize, Triangle } from 'lucide-react';
 import { AiSummary } from './AiSummary';
-import { useDesktopReader } from './reader-layout';
-import type { WorkSummaryDto, WorkSummaryEvidenceDto } from '../../contracts/documents.generated';
+import { ReaderSheet } from './ReaderSheet';
+import { sheetBounds } from './reader-sheet-bounds';
+import { useDesktopReader, useWideReader } from './reader-layout';
+import type {
+  WorkSummaryDto,
+  WorkSummaryEvidenceDto,
+  WorkDocumentDto,
+} from '../../contracts/documents.generated';
 import { WorkHeading } from './WorkHeading';
 import { ReaderContext, type ReaderSearch } from './reader-context';
 import { CATEGORY_CATALOG } from '../../contracts/catalog.generated';
 import { DOCUMENT_LABELS, orderDocuments } from '../discovery/search';
 import type { SearchWorkDto } from '../../contracts/discovery.generated';
-import type { WorkDocumentDto } from '../../contracts/documents.generated';
 import styles from './WorkPage.module.css';
-
 export function WorkReader({
   work,
   kind,
@@ -28,20 +43,26 @@ export function WorkReader({
   summary?: WorkSummaryDto | null | undefined;
   onReference?: (reference: WorkSummaryEvidenceDto) => void;
 }) {
-  const documents = orderDocuments(suppliedDocuments);
-  const desktop = useDesktopReader();
-  const [summarySelected, setSummarySelected] = useState(false);
-  const showSummary = !!summary && summarySelected && !desktop;
-  const [expanded, setExpanded] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
-  const [controls, setControls] = useState(true);
-  const [search, bindSearch] = useState<ReaderSearch | null>(null);
-  const root = useRef<HTMLDivElement>(null);
-  const bar = useRef<HTMLDivElement>(null);
-  const screenButton = useRef<HTMLButtonElement>(null);
-  const native = useRef(false);
-  const point = useRef<{ id: number; x: number; y: number } | null>(null);
-  const detailsId = useId();
+  const documents = orderDocuments(suppliedDocuments),
+    desktop = useDesktopReader(),
+    wide = useWideReader();
+  const [sheetOpen, setSheetOpen] = useState(false),
+    [sheetHeight, setSheetHeight] = useState(() =>
+      Math.max(sheetBounds().min, Math.min(sheetBounds().max, 360, window.innerHeight * 0.42)),
+    );
+  const [reportOpen, setReportOpen] = useState(false);
+  const [progress, setProgress] = useState(0),
+    [atEnd, setAtEnd] = useState(false),
+    [titleHeight, setTitleHeight] = useState(100),
+    [headerHeight, setHeaderHeight] = useState(68);
+  const [fullscreen, setFullscreen] = useState(false),
+    [controls, setControls] = useState(true),
+    [search, bindSearch] = useState<ReaderSearch | null>(null);
+  const root = useRef<HTMLDivElement>(null),
+    screenButton = useRef<HTMLButtonElement>(null),
+    native = useRef(false),
+    point = useRef<{ id: number; x: number; y: number } | null>(null),
+    sheetId = useId();
   const closeScreen = useCallback(() => {
     setFullscreen(false);
     setControls(true);
@@ -74,28 +95,6 @@ export function WorkReader({
       document.removeEventListener('fullscreenchange', changed);
     };
   }, [fullscreen, closeScreen]);
-  useEffect(() => {
-    const element = root.current;
-    if (!element) return;
-    const resize = () => {
-      const surface = element.querySelector<HTMLElement>('[data-reader-surface]');
-      if (surface)
-        element.style.setProperty(
-          '--reader-top',
-          `${Math.max(0, surface.getBoundingClientRect().top + window.scrollY)}px`,
-        );
-    };
-    const observer = new ResizeObserver(resize);
-    if (bar.current) observer.observe(bar.current);
-    const title = element.querySelector('h1');
-    if (title) observer.observe(title);
-    resize();
-    window.addEventListener('resize', resize);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', resize);
-    };
-  }, [expanded, fullscreen]);
   const toggleScreen = () => {
     if (fullscreen) {
       closeScreen();
@@ -112,198 +111,323 @@ export function WorkReader({
         })
         .catch(() => {});
   };
+
+  useEffect(() => {
+    const heading = root.current?.querySelector('h1'),
+      header = document.querySelector('.site-header');
+    const resize = () => {
+      if (heading) setTitleHeight(Math.max(36, heading.getBoundingClientRect().height) + 24);
+      if (header) setHeaderHeight(header.getBoundingClientRect().height);
+      setSheetHeight((h) => Math.max(sheetBounds().min, Math.min(sheetBounds().max, h)));
+    };
+    let frame = 0;
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(resize);
+    };
+    const observer = new ResizeObserver(schedule);
+    if (heading) observer.observe(heading);
+    if (header) observer.observe(header);
+    window.addEventListener('resize', schedule);
+    resize();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', schedule);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+  const [sheetMoving, setSheetMoving] = useState(false);
+  const changeSheet = (open: boolean) => {
+    setSheetMoving(true);
+    setSheetOpen(open);
+  };
+  const previousSheet = useRef(false);
+  useEffect(() => {
+    if (previousSheet.current === sheetOpen) return;
+    previousSheet.current = sheetOpen;
+    if (sheetOpen && !desktop) window.scrollTo({ top: 0, behavior: 'smooth' });
+    const timer = window.setTimeout(() => setSheetMoving(false), 380);
+    return () => window.clearTimeout(timer);
+  }, [sheetOpen, desktop]);
+  useEffect(() => {
+    const shell = root.current?.closest('.app-shell');
+    if (!(shell instanceof HTMLElement)) return;
+    shell.style.setProperty('--reader-header-size', `${headerHeight}px`);
+    shell.classList.toggle('reader-sheet-open', !desktop && sheetOpen && !fullscreen);
+    return () => {
+      shell.classList.remove('reader-sheet-open');
+      shell.style.removeProperty('--reader-header-size');
+    };
+  }, [sheetOpen, desktop, fullscreen, headerHeight]);
+  const bottom = useRef(false),
+    touchY = useRef<number | null>(null);
+  const continueBelow = (delta: number) => {
+    if (desktop || fullscreen || delta <= 0 || !bottom.current) return;
+    const before = window.scrollY;
+    requestAnimationFrame(() => {
+      if (window.scrollY === before && bottom.current)
+        window.scrollBy({ top: delta, behavior: 'instant' });
+    });
+  };
+  const reportScroll = useCallback(({ top, remaining }: { top: number; remaining: number }) => {
+    setProgress(Math.round(Math.max(0, Math.min(1, top / 80)) * 100) / 100);
+    bottom.current = remaining < 8;
+    if (remaining < 8) setAtEnd(true);
+  }, []);
   const openReference = (reference: WorkSummaryEvidenceDto) => {
-    setSummarySelected(false);
+    setAtEnd(false);
     onReference?.(reference);
-    if (!desktop)
-      requestAnimationFrame(() =>
-        root.current
-          ?.querySelector('[data-reader-surface]')
-          ?.scrollIntoView({ block: 'start', behavior: 'smooth' }),
-      );
+    if (!desktop) window.scrollTo({ top: 0, behavior: 'instant' });
   };
   const category = (id: string) => CATEGORY_CATALOG.find((item) => item.id === id);
   const subcategory = (id: string, sub: string) =>
     category(id)?.subcategories.find((item) => item.id === sub)?.label ?? 'なし';
+  const information = work && (
+    <section className={styles.information} aria-label="作品の情報">
+      <h2>{work.title}</h2>
+      <dl>
+        {[
+          ['名前', work.author],
+          ['入学年度', `${work.enterYear}年度`],
+          ['学科', work.course === 'tankyu' ? '探究科' : '普通科'],
+          ['カテゴリ1', category(work.category1)?.label ?? 'なし'],
+          ['サブカテゴリ1', subcategory(work.category1, work.subCategory1)],
+          ...(work.category2 !== 'none'
+            ? [
+                ['カテゴリ2', category(work.category2)?.label ?? 'なし'],
+                ['サブカテゴリ2', subcategory(work.category2, work.subCategory2)],
+              ]
+            : []),
+        ].map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {summary?.keywords?.length ? (
+        <div className={styles.keywords} aria-label="キーワード">
+          {summary.keywords.map((k) => (
+            <span key={k}>{k}</span>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+  const summaryContent = summary ? (
+    <AiSummary summary={summary} onReference={openReference} />
+  ) : (
+    <p className={styles.noSummary}>{work?.summary ?? 'この作品のAI要約はまだありません。'}</p>
+  );
+  const insights = (
+    <>
+      {summaryContent}
+      {work && <RelatedWorks key={work.documentID} id={work.documentID} />}
+    </>
+  );
+  const detailAction = (
+    <button
+      className={styles.detailsToggle}
+      data-stable-press
+      aria-label={sheetOpen ? '作品の補足を閉じる' : '作品の詳細を見る'}
+      aria-expanded={sheetOpen}
+      aria-controls={sheetId}
+      onClick={() => changeSheet(!sheetOpen)}
+    >
+      <Triangle
+        size={12}
+        fill="currentColor"
+        className={sheetOpen ? styles.triangleUp : styles.triangleDown}
+      />
+    </button>
+  );
+  const collapsed = sheetOpen ? 1 : progress;
   return (
-    <ReaderContext.Provider value={{ bindSearch, pdfVisible: !showSummary }}>
+    <ReaderContext.Provider
+      value={{
+        bindSearch,
+        pdfVisible: true,
+        onScroll: reportScroll,
+        reportDocument: () => setReportOpen(true),
+      }}
+    >
+      {reportOpen && work && (
+        <Modal title="PDFの問題を報告" onClose={() => setReportOpen(false)}>
+          <WorkActions work={work} initialKind="pdf" initialDocument={kind} />
+        </Modal>
+      )}
       <div
         ref={root}
         className={`${styles.workPage} ${fullscreen ? styles.fullscreen : ''}`}
+        style={
+          {
+            '--reader-header-height': `${!desktop && sheetOpen ? 0 : headerHeight}px`,
+            '--title-space': `${desktop ? titleHeight : Math.max(0, titleHeight * (1 - collapsed))}px`,
+            '--title-opacity': 1 - collapsed,
+            '--sheet-height': `${!desktop && sheetOpen && !fullscreen ? sheetHeight : 0}px`,
+          } as CSSProperties
+        }
         data-reader-fullscreen={fullscreen}
+        data-sheet-open={sheetOpen}
+        data-sheet-moving={sheetMoving}
+        data-title-collapsed={collapsed > 0.9}
       >
-        {work ? (
-          <WorkHeading work={work} kind={kind} documents={documents} />
-        ) : (
-          <header className={styles.intro}>
-            <h1>保存した資料</h1>
-          </header>
-        )}
-        <div ref={bar} className={styles.readerBar}>
-          <div className={styles.tabs} role="group" aria-label="資料の種類">
-            {summary && !desktop && !fullscreen && (
-              <button aria-pressed={showSummary} onClick={() => setSummarySelected(true)}>
-                AI要約
-              </button>
-            )}
-            {documents.map((doc) => (
+        <aside className={styles.leftRail} aria-label="作品情報欄">
+          {work ? (
+            <WorkHeading
+              work={work}
+              kind={kind}
+              documents={documents}
+              detailAction={desktop ? undefined : detailAction}
+              collapsed={collapsed}
+              sheetOpen={sheetOpen}
+              onOpenDetails={() => changeSheet(true)}
+            />
+          ) : (
+            <header className={styles.intro}>
+              <h1>保存した資料</h1>
+            </header>
+          )}
+          <div className={styles.workDetails}>{information}</div>
+          {desktop && !wide && (
+            <aside className={styles.insights} aria-label="要約と関連作品">
+              {insights}
+            </aside>
+          )}
+        </aside>
+        <div className={styles.readingColumn}>
+          <div className={styles.readerBar}>
+            <div className={styles.tabs} role="group" aria-label="資料の種類">
+              {documents.map((doc) => (
+                <button
+                  key={doc.kind}
+                  aria-pressed={kind === doc.kind}
+                  onClick={() => {
+                    setAtEnd(false);
+                    onKind(doc.kind);
+                  }}
+                >
+                  {DOCUMENT_LABELS[doc.kind]}
+                </button>
+              ))}
+            </div>
+            {fullscreen && (
               <button
-                key={doc.kind}
-                aria-pressed={!showSummary && kind === doc.kind}
-                onClick={() => {
-                  setSummarySelected(false);
-                  onKind(doc.kind);
-                }}
+                className={styles.roundButton}
+                aria-label="PDF内を検索"
+                disabled={!search}
+                onClick={() => search?.toggle()}
               >
-                {DOCUMENT_LABELS[doc.kind]}
+                <Search size={21} />
               </button>
-            ))}
+            )}
           </div>
-          {!fullscreen && (
-            <button
-              className={styles.detailsToggle}
-              aria-label={expanded ? '作品の詳細を閉じる' : '作品の詳細を見る'}
-              aria-expanded={expanded}
-              aria-controls={detailsId}
-              onClick={() => setExpanded(!expanded)}
-            >
-              <Triangle
-                size={12}
-                fill="currentColor"
-                className={expanded ? styles.triangleUp : styles.triangleDown}
-              />
-            </button>
-          )}
-          {fullscreen && (
-            <button
-              className={styles.roundButton}
-              aria-label="PDF内を検索"
-              disabled={!search}
-              onClick={() => search?.toggle()}
-            >
-              <Search size={21} />
-            </button>
-          )}
-        </div>
-        {work && (
-          <section
-            id={detailsId}
-            aria-label="作品の詳細"
-            className={styles.workDetails}
-            data-expanded={expanded}
-          >
-            <dl>
-              <div>
-                <dt>名前</dt>
-                <dd>{work.author}</dd>
-              </div>
-              <div>
-                <dt>入学年度</dt>
-                <dd>{work.enterYear}年度</dd>
-              </div>
-              <div>
-                <dt>学科</dt>
-                <dd>{work.course === 'tankyu' ? '探究科' : '普通科'}</dd>
-              </div>
-              <div>
-                <dt>カテゴリ1</dt>
-                <dd>{category(work.category1)?.label ?? 'なし'}</dd>
-              </div>
-              <div>
-                <dt>サブカテゴリ1</dt>
-                <dd>{subcategory(work.category1, work.subCategory1)}</dd>
-              </div>
-              <div>
-                <dt>カテゴリ2</dt>
-                <dd>{category(work.category2)?.label ?? 'なし'}</dd>
-              </div>
-              <div>
-                <dt>サブカテゴリ2</dt>
-                <dd>{subcategory(work.category2, work.subCategory2)}</dd>
-              </div>
-            </dl>
-            {!summary && work.summary && (
-              <div className={styles.summary}>
-                <h2>この探究について</h2>
-                <p>{work.summary}</p>
-              </div>
-            )}
-            {summary && desktop && onReference && (
-              <div className={styles.aiSidebar}>
-                <AiSummary summary={summary} onReference={openReference} />
-              </div>
-            )}
-          </section>
-        )}
-        <div
-          className={styles.documentSurface}
-          data-reader-surface
-          onPointerDownCapture={(event) => {
-            if (event.isPrimary)
-              point.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
-            else point.current = null;
-          }}
-          onPointerCancelCapture={() => {
-            point.current = null;
-          }}
-          onPointerUpCapture={(event) => {
-            const start = point.current;
-            point.current = null;
-            if (
-              !start ||
-              start.id !== event.pointerId ||
-              Math.hypot(start.x - event.clientX, start.y - event.clientY) > 8
-            )
-              return;
-            const path = event.nativeEvent.composedPath();
-            if (
-              path.some(
-                (node) =>
-                  node instanceof Element &&
-                  node.matches(
-                    'button,input,a,textarea,select,[role="button"],[role="menuitem"],[role="checkbox"]',
-                  ),
+          <div
+            className={styles.documentSurface}
+            data-reader-surface
+            onWheelCapture={(e) => {
+              if (!e.ctrlKey) continueBelow(e.deltaY);
+            }}
+            onTouchStartCapture={(e) => {
+              touchY.current = e.touches.length === 1 ? e.touches[0]!.clientY : null;
+            }}
+            onTouchMoveCapture={(e) => {
+              if (touchY.current !== null && e.touches.length === 1) {
+                const next = e.touches[0]!.clientY;
+                continueBelow(touchY.current - next);
+                touchY.current = next;
+              }
+            }}
+            onPointerDownCapture={(event) => {
+              if (event.isPrimary)
+                point.current = {
+                  id: event.pointerId,
+                  x: event.clientX,
+                  y: event.clientY,
+                };
+              else point.current = null;
+            }}
+            onPointerCancelCapture={() => {
+              point.current = null;
+            }}
+            onPointerUpCapture={(event) => {
+              const start = point.current;
+              point.current = null;
+              if (
+                !start ||
+                start.id !== event.pointerId ||
+                Math.hypot(start.x - event.clientX, start.y - event.clientY) > 8
               )
-            )
-              return;
-            if (window.getSelection()?.toString()) return;
-            setControls((value) => !value);
-          }}
-        >
-          <div className={styles.pdfContent} hidden={showSummary}>
-            {children}
+                return;
+              const path = event.nativeEvent.composedPath();
+              if (
+                path.some(
+                  (node) =>
+                    node instanceof Element &&
+                    node.matches(
+                      'button,input,a,textarea,select,[role="button"],[role="menuitem"],[role="checkbox"]',
+                    ),
+                )
+              )
+                return;
+              if (window.getSelection()?.toString()) return;
+              setControls((value) => !value);
+            }}
+          >
+            <div className={styles.pdfContent}>{children}</div>
+            {!fullscreen && controls && (
+              <button
+                className={`${styles.roundButton} ${styles.searchFloat}`}
+                aria-label="PDF内を検索"
+                disabled={!search}
+                onClick={() => search?.toggle()}
+              >
+                <Search size={21} />
+              </button>
+            )}
+            {(controls || fullscreen) && (
+              <button
+                ref={screenButton}
+                className={`${styles.roundButton} ${styles.fullscreenFloat}`}
+                aria-label={fullscreen ? '全画面表示を解除' : '全画面表示'}
+                aria-pressed={fullscreen}
+                disabled={!fullscreen && !search}
+                onClick={toggleScreen}
+              >
+                {fullscreen ? <Minimize size={21} /> : <Maximize size={21} />}
+              </button>
+            )}
+            <button className={styles.srControl} onClick={() => setControls((v) => !v)}>
+              {controls ? 'PDF操作ボタンを隠す' : 'PDF操作ボタンを表示'}
+            </button>
           </div>
-          {showSummary && summary && (
-            <div className={styles.aiPanel}>
-              <AiSummary summary={summary} onReference={openReference} />
+        </div>
+        {desktop && wide && (
+          <aside className={styles.insights} aria-label="要約と関連作品">
+            {insights}
+          </aside>
+        )}
+        {!desktop &&
+          !fullscreen &&
+          !sheetOpen &&
+          work &&
+          (atEnd || !documents.some((d) => d.state === 'available')) && (
+            <div className={styles.afterDocument} data-after-pdf>
+              <RelatedWorks key={work.documentID} id={work.documentID} />
             </div>
           )}
-          {!showSummary && !fullscreen && controls && (
-            <button
-              className={`${styles.roundButton} ${styles.searchFloat}`}
-              aria-label="PDF内を検索"
-              disabled={!search}
-              onClick={() => search?.toggle()}
-            >
-              <Search size={21} />
-            </button>
-          )}
-          {!showSummary && (controls || fullscreen) && (
-            <button
-              ref={screenButton}
-              className={`${styles.roundButton} ${styles.fullscreenFloat}`}
-              aria-label={fullscreen ? '全画面表示を解除' : '全画面表示'}
-              aria-pressed={fullscreen}
-              disabled={!fullscreen && !search}
-              onClick={toggleScreen}
-            >
-              {fullscreen ? <Minimize size={21} /> : <Maximize size={21} />}
-            </button>
-          )}
-          <button className={styles.srControl} onClick={() => setControls((value) => !value)}>
-            {controls ? 'PDF操作ボタンを隠す' : 'PDF操作ボタンを表示'}
-          </button>
-        </div>
+        {!desktop && !fullscreen && sheetOpen && (
+          <div id={sheetId}>
+            <ReaderSheet
+              height={sheetHeight}
+              onHeight={setSheetHeight}
+              onClose={() => changeSheet(false)}
+              summary={summaryContent}
+              information={information}
+              related={work && <RelatedWorks key={work.documentID} id={work.documentID} />}
+            />
+          </div>
+        )}
       </div>
     </ReaderContext.Provider>
   );

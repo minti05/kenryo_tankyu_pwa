@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1431" height="1431" viewBox="0 0 1431 1431" role="img" aria-labelledby="loading-title loading-desc">
+  <title id="loading-title">探究アーカイブ ローディング</title>
+  <desc id="loading-desc">土台を残したまま階段と本が同時に現れ始め、足跡が上へ進みます。1秒で完成し、少し静止してから動く部分だけを消して繰り返します。</desc>
+  <style>
+    .step { animation: step-in 650ms cubic-bezier(.25,.1,.25,1) both; }
+    .step-lower { animation-delay: 50ms; }
+    .step-upper { animation-delay: 150ms; }
+    .foot { transform-box: fill-box; transform-origin: center; animation: foot-in 320ms ease-out both; }
+    .foot-lower { animation-delay: 430ms; }
+    .foot-upper { animation-delay: 620ms; animation-duration: 380ms; }
+    .book { transform-box: fill-box; transform-origin: center bottom; animation: book-in 650ms cubic-bezier(.25,.1,.25,1) both; }
+    .book-left { animation-delay: 50ms; }
+    .book-right { animation-delay: 150ms; }
+    @keyframes step-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes foot-in { 0% { opacity: 0; transform: translateY(-14px) scale(1.08); } 65% { opacity: 1; transform: translateY(1px) scale(.97); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes book-in { from { opacity: 0; transform: translateY(8px) scaleY(.94); } to { opacity: 1; transform: translateY(0) scaleY(1); } }
+    @media (prefers-reduced-motion: reduce) { .step, .foot, .book { animation: none; } }
+
+    .step-lower { animation: loop-step-lower 1600ms linear infinite; }
+    @keyframes loop-step-lower { 0%, 3.12500% { opacity: 0; transform: translateY(18px); animation-timing-function: cubic-bezier(.25,.1,.25,1); } 43.75000%, 87.5% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(0); } }
+    .step-upper { animation: loop-step-upper 1600ms linear infinite; }
+    @keyframes loop-step-upper { 0%, 9.37500% { opacity: 0; transform: translateY(18px); animation-timing-function: cubic-bezier(.25,.1,.25,1); } 50.00000%, 87.5% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(0); } }
+    .book-left { animation: loop-book-left 1600ms linear infinite; }
+    @keyframes loop-book-left { 0%, 3.12500% { opacity: 0; transform: translateY(8px) scaleY(.94); animation-timing-function: cubic-bezier(.25,.1,.25,1); } 43.75000%, 87.5% { opacity: 1; transform: translateY(0) scaleY(1); } 100% { opacity: 0; transform: translateY(0) scaleY(1); } }
+    .book-right { animation: loop-book-right 1600ms linear infinite; }
+    @keyframes loop-book-right { 0%, 9.37500% { opacity: 0; transform: translateY(8px) scaleY(.94); animation-timing-function: cubic-bezier(.25,.1,.25,1); } 50.00000%, 87.5% { opacity: 1; transform: translateY(0) scaleY(1); } 100% { opacity: 0; transform: translateY(0) scaleY(1); } }
+    .foot-lower { animation: loop-foot-lower 1600ms linear infinite; }
+    @keyframes loop-foot-lower { 0%, 26.87500% { opacity: 0; transform: translateY(-14px) scale(1.08); animation-timing-function: ease-out; } 39.87500% { opacity: 1; transform: translateY(1px) scale(.97); animation-timing-function: ease-out; } 46.87500%, 87.5% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(0) scale(1); } }
+    .foot-upper { animation: loop-foot-upper 1600ms linear infinite; }
+    @keyframes loop-foot-upper { 0%, 38.75000% { opacity: 0; transform: translateY(-14px) scale(1.08); animation-timing-function: ease-out; } 54.18750% { opacity: 1; transform: translateY(1px) scale(.97); animation-timing-function: ease-out; } 62.50000%, 87.5% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(0) scale(1); } }
+    @media (prefers-reduced-motion: reduce) { .step, .foot, .book { animation: none; } }
+  </style>
+  <g class="foundation">
+    <path fill="#980136" d="M44 371 718 17 1383 367 1383 1082 738 1423 739 1371 233 1120 233 1178 44 1086Z"/>
+    <path fill="#5b0031" d="M233 1178V490C229 477 231 471 242 466L714 224Q720 221 726 221V410L521 513 525 693 319 802 322 971 233 1021Z"/>
+    <path fill="#fff" d="M726 221 1194 468 1383 367V400L1357 413 1358 1044 739 1371 738 1423 233 1178V1021L322 971 319 802 525 693 521 513 726 410Z"/>
+  </g>
+  <path class="step step-lower" fill="#980136" d="M319 802 525 693 964 919 755 1028Z"/>
+  <path class="step step-upper" fill="#980136" d="M521 513 726 410 1163 637 960 744Z"/>
+  <g class="foot foot-lower" fill="#500c25">
+    <path d="M671 911C690 905 685 891 703 877 720 865 751 858 773 858 795 856 799 867 790 881 776 903 738 918 709 928 698 933 694 933 684 927L669 918Q662 914 671 911Z"/>
+    <path d="M619 936C628 930 637 924 645 924 653 925 664 933 675 938Q681 942 675 945L655 953Q647 956 639 952L620 943Q613 940 619 936Z"/>
+  </g>
+  <g class="foot foot-upper" fill="#500c25">
+    <path d="M729 534C749 520 762 508 798 500 827 493 850 493 857 500 865 507 852 524 840 532 819 546 790 542 766 552 755 558 754 556 743 551L729 544Q722 540 729 534Z"/>
+    <path d="M682 562C690 557 699 550 707 549 713 549 726 558 736 563Q741 567 735 570L714 579Q707 582 700 578L682 567Q679 565 682 562Z"/>
+  </g>
+  <g class="book book-left" fill="#500c25">
+    <path d="M1107 762 1159 737V765L1107 791Z"/>
+    <path d="M1107 815 1159 788 1160 1016 1107 1047Z"/>
+    <path d="M1107 1073 1160 1043V1085L1107 1116Z"/>
+  </g>
+  <g class="book book-right" fill="#500c25">
+    <path d="M1218 612 1273 582V612L1218 643Z"/>
+    <path d="M1218 668 1273 638V954L1218 983Z"/>
+    <path d="M1218 1012 1273 983V1028L1218 1057Z"/>
+  </g>
+</svg>
