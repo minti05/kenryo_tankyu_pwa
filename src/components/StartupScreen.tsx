@@ -12,7 +12,12 @@ export function StartupScreen() {
   return (
     <div className="startup-screen" role="status" aria-label="ログイン状態を確認中">
       <img src="/icons/loading.svg" alt="" width="104" height="104" />
-      <p>探究アーカイブ</p>
+      <p>
+        探究アーカイブ
+        <span className="startup-delay">
+          起動に時間がかかっています。もうしばらくお待ちください。
+        </span>
+      </p>
     </div>
   );
 }
