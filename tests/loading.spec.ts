@@ -21,6 +21,13 @@ test('HTML初期表示と認証待ちで同じSVGを保ち、1秒未満でも準
   await page.goto('/tests/loading-bootstrap.html', { waitUntil: 'commit' });
   const screen = page.locator('#app-startup');
   await expect(screen).toBeVisible();
+  const movingParts = screen.locator('svg :is(.step, .book, .foot)');
+  await expect(movingParts).toHaveCount(6);
+  for (const part of await movingParts.all()) {
+    await expect(part).toHaveCSS('animation-duration', '1s');
+    await expect(part).toHaveCSS('animation-iteration-count', 'infinite');
+  }
+  await expect(screen.locator('svg .foundation')).toHaveCSS('animation-name', 'none');
   await screen.locator('svg').evaluate((el) => {
     el.setAttribute('data-original-node', 'yes');
   });
