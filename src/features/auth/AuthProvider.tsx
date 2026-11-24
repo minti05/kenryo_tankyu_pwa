@@ -21,6 +21,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ApiError, createApiClient, createApiTransport } from '../../lib/api-client';
 import { initializeAuth, authConfigured } from './firebase';
 import { AuthContext, type AuthState, type Session } from './context';
+
+const registrationRetryDelays = [1000, 2000, 3000, 5000];
+
 function message(error: unknown): string {
   const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
   const messages: Record<string, string> = {
@@ -140,12 +143,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               return value.auth.currentUser?.uid === user.uid ? token : null;
             });
             let data: unknown;
-            try {
-              data = await request<unknown>('/api/session');
-            } catch (e) {
-              if (!(e instanceof ApiError) || e.code !== 'claims_refresh_required') throw e;
-              await user.getIdToken(true);
-              data = await request<unknown>('/api/session');
+            for (const delay of [...registrationRetryDelays, null]) {
+              try {
+                data = await request<unknown>('/api/session');
+              } catch (e) {
+                if (!(e instanceof ApiError) || e.code !== 'claims_refresh_required') throw e;
+                if (!current()) return;
+                await user.getIdToken(true);
+                if (!current()) return;
+                try {
+                  data = await request<unknown>('/api/session');
+                } catch (retryError) {
+                  if (
+                    delay === null ||
+                    !(retryError instanceof ApiError) ||
+                    retryError.code !== 'claims_refresh_required'
+                  )
+                    throw retryError;
+                  data = undefined;
+                }
+              }
+              const processing =
+                data &&
+                typeof data === 'object' &&
+                'registration' in data &&
+                data.registration === 'processing';
+              if (delay === null || (data !== undefined && !processing)) break;
+              if (!current()) return;
+              await new Promise<void>((resolve) => window.setTimeout(resolve, delay));
+              if (!current()) return;
             }
             if (
               !data ||
@@ -198,7 +224,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (caught instanceof ApiError && [401, 403].includes(caught.status))
                   await revokeCache().catch(() => {});
               }
-              if (caught instanceof ApiError && caught.status === 401)
+              if (
+                caught instanceof ApiError &&
+                caught.status === 401 &&
+                caught.code !== 'claims_refresh_required'
+              )
                 await value.sdk.signOut(value.auth);
             }
           } finally {

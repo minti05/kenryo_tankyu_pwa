@@ -21,6 +21,13 @@ test('HTML初期表示と認証待ちで同じSVGを保ち、1秒未満でも準
   await page.goto('/tests/loading-bootstrap.html', { waitUntil: 'commit' });
   const screen = page.locator('#app-startup');
   await expect(screen).toBeVisible();
+  const movingParts = screen.locator('svg :is(.step, .book, .foot)');
+  await expect(movingParts).toHaveCount(6);
+  for (const part of await movingParts.all()) {
+    await expect(part).toHaveCSS('animation-duration', '1s');
+    await expect(part).toHaveCSS('animation-iteration-count', 'infinite');
+  }
+  await expect(screen.locator('svg .foundation')).toHaveCSS('animation-name', 'none');
   await screen.locator('svg').evaluate((el) => {
     el.setAttribute('data-original-node', 'yes');
   });
@@ -34,6 +41,35 @@ test('HTML初期表示と認証待ちで同じSVGを保ち、1秒未満でも準
   await expect(screen).toBeVisible();
   await page.evaluate(() => (window as unknown as { finishStartup(): void }).finishStartup());
   await expect(screen).toBeHidden({ timeout: 800 });
+});
+
+test('起動画面が5秒続いたときだけ案内し、表示し直すと待ち時間を数え直す', async ({ page }) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/tests/loading-harness.tsx', async (route) => {
+    await gate;
+    await route.continue();
+  });
+  await page.goto('/tests/loading-bootstrap.html', { waitUntil: 'commit' });
+  const screen = page.locator('#app-startup');
+  const notice = screen.getByText('起動に時間がかかっています。もうしばらくお待ちください。', {
+    exact: true,
+  });
+  await expect(screen).toBeVisible();
+  await expect(notice).toHaveCSS('animation-delay', '5s');
+  await expect(notice).toBeHidden();
+  await expect(notice).toBeVisible({ timeout: 7000 });
+  release();
+  await page.waitForFunction(() => 'finishStartup' in window);
+  await expect(notice).toBeVisible();
+  await page.evaluate(() => (window as unknown as { finishStartup(): void }).finishStartup());
+  await expect(notice).toBeHidden();
+  await page.getByRole('button', { name: '起動表示を再表示' }).click();
+  await expect(screen).toBeVisible();
+  await expect(notice).toBeHidden();
 });
 
 test('ヒントは保存済みを即表示し、PDFを開き直しても通信せず、同期は最大1日1回', async ({

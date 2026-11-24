@@ -40,73 +40,145 @@
       >
         <title id="loading-title">探究アーカイブ ローディング</title>
         <desc id="loading-desc">
-          土台を残したまま階段と本が同時に現れ始め、足跡が上へ進みます。1秒で完成し、そのまま静止します。
+          土台を残したまま階段と本が現れ、足跡が上へ進む動きを1秒ごとに繰り返します。
         </desc>
         <style>
-          .step {
-            animation: step-in 650ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
-          }
-          .step-lower {
-            animation-delay: 50ms;
-          }
-          .step-upper {
-            animation-delay: 150ms;
-          }
           .foot {
             transform-box: fill-box;
             transform-origin: center;
-            animation: foot-in 320ms ease-out both;
-          }
-          .foot-lower {
-            animation-delay: 430ms;
-          }
-          .foot-upper {
-            animation-delay: 620ms;
-            animation-duration: 380ms;
           }
           .book {
             transform-box: fill-box;
             transform-origin: center bottom;
-            animation: book-in 650ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
           }
-          .book-left {
-            animation-delay: 50ms;
+          .step-lower {
+            animation: loop-step-lower 1s linear infinite;
           }
-          .book-right {
-            animation-delay: 150ms;
-          }
-          @keyframes step-in {
-            from {
+          @keyframes loop-step-lower {
+            0%,
+            3.125% {
               opacity: 0;
               transform: translateY(18px);
+              animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
             }
-            to {
+            43.75%,
+            87.5% {
               opacity: 1;
               transform: translateY(0);
             }
-          }
-          @keyframes foot-in {
-            0% {
+            100% {
               opacity: 0;
-              transform: translateY(-14px) scale(1.08);
+              transform: translateY(0);
             }
-            65% {
+          }
+          .step-upper {
+            animation: loop-step-upper 1s linear infinite;
+          }
+          @keyframes loop-step-upper {
+            0%,
+            9.375% {
+              opacity: 0;
+              transform: translateY(18px);
+              animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+            }
+            50%,
+            87.5% {
               opacity: 1;
-              transform: translateY(1px) scale(0.97);
+              transform: translateY(0);
             }
             100% {
+              opacity: 0;
+              transform: translateY(0);
+            }
+          }
+          .book-left {
+            animation: loop-book-left 1s linear infinite;
+          }
+          @keyframes loop-book-left {
+            0%,
+            3.125% {
+              opacity: 0;
+              transform: translateY(8px) scaleY(0.94);
+              animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+            }
+            43.75%,
+            87.5% {
+              opacity: 1;
+              transform: translateY(0) scaleY(1);
+            }
+            100% {
+              opacity: 0;
+              transform: translateY(0) scaleY(1);
+            }
+          }
+          .book-right {
+            animation: loop-book-right 1s linear infinite;
+          }
+          @keyframes loop-book-right {
+            0%,
+            9.375% {
+              opacity: 0;
+              transform: translateY(8px) scaleY(0.94);
+              animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+            }
+            50%,
+            87.5% {
+              opacity: 1;
+              transform: translateY(0) scaleY(1);
+            }
+            100% {
+              opacity: 0;
+              transform: translateY(0) scaleY(1);
+            }
+          }
+          .foot-lower {
+            animation: loop-foot-lower 1s linear infinite;
+          }
+          @keyframes loop-foot-lower {
+            0%,
+            26.875% {
+              opacity: 0;
+              transform: translateY(-14px) scale(1.08);
+              animation-timing-function: ease-out;
+            }
+            39.875% {
+              opacity: 1;
+              transform: translateY(1px) scale(0.97);
+              animation-timing-function: ease-out;
+            }
+            46.875%,
+            87.5% {
               opacity: 1;
               transform: translateY(0) scale(1);
             }
-          }
-          @keyframes book-in {
-            from {
+            100% {
               opacity: 0;
-              transform: translateY(8px) scaleY(0.94);
+              transform: translateY(0) scale(1);
             }
-            to {
+          }
+          .foot-upper {
+            animation: loop-foot-upper 1s linear infinite;
+          }
+          @keyframes loop-foot-upper {
+            0%,
+            38.75% {
+              opacity: 0;
+              transform: translateY(-14px) scale(1.08);
+              animation-timing-function: ease-out;
+            }
+            54.1875% {
               opacity: 1;
-              transform: translateY(0) scaleY(1);
+              transform: translateY(1px) scale(0.97);
+              animation-timing-function: ease-out;
+            }
+            62.5%,
+            87.5% {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+            100% {
+              opacity: 0;
+              transform: translateY(0) scale(1);
             }
           }
           @media (prefers-reduced-motion: reduce) {
@@ -160,7 +232,10 @@
           <path d="M1218 1012 1273 983V1028L1218 1057Z" />
         </g>
       </svg>
-      <p>探究アーカイブ</p>
+      <p>
+        探究アーカイブ
+        <span class="startup-delay">起動に時間がかかっています。もうしばらくお待ちください。</span>
+      </p>
     </div>
     <div id="root"></div>
     <script type="module" src="/src/app/main.tsx"></script>

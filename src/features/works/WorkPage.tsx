@@ -208,7 +208,6 @@ function DocumentPane({
     null,
   );
   const { requestResponse, request: jsonRequest, cacheSession, session } = useAuth(),
-    [savedMessage, setSavedMessage] = useState(''),
     saved = useRef(false),
     historyIntent = useRef(operation()),
     historyStatus = useRef<'idle' | 'pending' | 'done'>('idle'),
@@ -228,7 +227,6 @@ function DocumentPane({
   if (selection !== path) {
     setSelection(path);
     setPending(true);
-    setSavedMessage('');
     setHistoryError(false);
     setError('');
   }
@@ -332,23 +330,10 @@ function DocumentPane({
     void recordView();
     if (saved.current || !data || !owner.current) return;
     saved.current = true;
-    const identity = owner.current;
-
-    try {
-      await saveViewed(identity.cache, identity.session, work, doc.kind, data);
-      try {
-        await preparePdfAssets();
-        if (alive.current) setSavedMessage('');
-      } catch {
-        if (alive.current)
-          setSavedMessage(
-            'PDFは端末内に保存しました。オフライン表示用の準備が完了していません。通信に接続して、もう一度開いてください。',
-          );
-      }
-    } catch {
-      if (alive.current)
-        setSavedMessage('この端末に保存できませんでした。オンラインでは引き続き閲覧できます。');
-    }
+    const { cache, session } = owner.current;
+    await saveViewed(cache, session, work, doc.kind, data)
+      .then(() => preparePdfAssets())
+      .catch(() => {});
   }
   const recoveryActions = (
     <div className={styles.recoveryActions}>
@@ -438,7 +423,6 @@ function DocumentPane({
             </button>
           </p>
         )}
-        {savedMessage && <p role="status">{savedMessage}</p>}
       </div>
     </>
   );

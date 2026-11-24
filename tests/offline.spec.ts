@@ -231,19 +231,45 @@ test('保存拒否でもオンライン表示を継続', async ({ page, context 
   await context.addInitScript(() => {
     const original = IDBObjectStore.prototype.put;
     IDBObjectStore.prototype.put = function (...args: Parameters<typeof original>) {
-      if (this.name === 'files') throw new DOMException('fixture', 'QuotaExceededError');
+      if (this.name === 'files') {
+        document.documentElement.dataset.pdfSaveRejected = 'true';
+        throw new DOMException('fixture', 'QuotaExceededError');
+      }
       return original.apply(this, args);
     };
   });
   await fixture(page, context);
   await page.goto('/works/24000010');
   await expectPixels(page);
+  await expect(page.locator('html')).toHaveAttribute('data-pdf-save-rejected', 'true');
   await expect(
     page.getByText('この端末に保存できませんでした。オンラインでは引き続き閲覧できます。'),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await page.getByRole('region', { name: 'PDFビューア', exact: true }).hover();
   await page.mouse.wheel(0, 400);
   await expectPixels(page);
+});
+test('オフライン表示の準備が失敗してもPDFの下に保存通知を表示しない', async ({ page, context }) => {
+  await context.addInitScript(() => {
+    const original = ServiceWorker.prototype.postMessage;
+    ServiceWorker.prototype.postMessage = function (
+      message: { type?: string; background?: boolean } | null,
+      transfer: Transferable[] = [],
+    ) {
+      if (message?.type === 'PREPARE_PDF_ASSETS' && !message.background) {
+        (transfer[0] as MessagePort).postMessage({ ok: false });
+        document.documentElement.dataset.pdfPreparationRejected = 'true';
+        return;
+      }
+      original.call(this, message, transfer);
+    };
+  });
+  await fixture(page, context);
+  await page.goto('/works/24000010');
+  await expectPixels(page);
+  await expect(page.locator('html')).toHaveAttribute('data-pdf-preparation-rejected', 'true');
+  await expect.poll(async () => (await rows(page)).length).toBeGreaterThan(0);
+  await expect(page.getByText('PDFは端末内に保存しました。', { exact: false })).toHaveCount(0);
 });
 test('IndexedDBの期限境界・時計巻戻し・別UID・失効後の遅い保存を拒否', async ({
   page,

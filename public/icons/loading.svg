@@ -1,19 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1431" height="1431" viewBox="0 0 1431 1431" role="img" aria-labelledby="loading-title loading-desc">
   <title id="loading-title">探究アーカイブ ローディング</title>
-  <desc id="loading-desc">土台を残したまま階段と本が同時に現れ始め、足跡が上へ進みます。1秒で完成し、そのまま静止します。</desc>
+  <desc id="loading-desc">土台を残したまま階段と本が現れ、足跡が上へ進む動きを1秒ごとに繰り返します。</desc>
   <style>
-    .step { animation: step-in 650ms cubic-bezier(.25,.1,.25,1) both; }
-    .step-lower { animation-delay: 50ms; }
-    .step-upper { animation-delay: 150ms; }
-    .foot { transform-box: fill-box; transform-origin: center; animation: foot-in 320ms ease-out both; }
-    .foot-lower { animation-delay: 430ms; }
-    .foot-upper { animation-delay: 620ms; animation-duration: 380ms; }
-    .book { transform-box: fill-box; transform-origin: center bottom; animation: book-in 650ms cubic-bezier(.25,.1,.25,1) both; }
-    .book-left { animation-delay: 50ms; }
-    .book-right { animation-delay: 150ms; }
-    @keyframes step-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes foot-in { 0% { opacity: 0; transform: translateY(-14px) scale(1.08); } 65% { opacity: 1; transform: translateY(1px) scale(.97); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
-    @keyframes book-in { from { opacity: 0; transform: translateY(8px) scaleY(.94); } to { opacity: 1; transform: translateY(0) scaleY(1); } }
+    .foot { transform-box: fill-box; transform-origin: center; }
+    .book { transform-box: fill-box; transform-origin: center bottom; }
+    .step-lower { animation: loop-step-lower 1s linear infinite; }
+    @keyframes loop-step-lower { 0%, 3.125% { opacity: 0; transform: translateY(18px); animation-timing-function: cubic-bezier(.25,.1,.25,1); } 43.75%, 87.5% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(0); } }
+    .step-upper { animation: loop-step-upper 1s linear infinite; }
+    @keyframes loop-step-upper { 0%, 9.375% { opacity: 0; transform: translateY(18px); animation-timing-function: cubic-bezier(.25,.1,.25,1); } 50%, 87.5% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(0); } }
+    .book-left { animation: loop-book-left 1s linear infinite; }
+    @keyframes loop-book-left { 0%, 3.125% { opacity: 0; transform: translateY(8px) scaleY(.94); animation-timing-function: cubic-bezier(.25,.1,.25,1); } 43.75%, 87.5% { opacity: 1; transform: translateY(0) scaleY(1); } 100% { opacity: 0; transform: translateY(0) scaleY(1); } }
+    .book-right { animation: loop-book-right 1s linear infinite; }
+    @keyframes loop-book-right { 0%, 9.375% { opacity: 0; transform: translateY(8px) scaleY(.94); animation-timing-function: cubic-bezier(.25,.1,.25,1); } 50%, 87.5% { opacity: 1; transform: translateY(0) scaleY(1); } 100% { opacity: 0; transform: translateY(0) scaleY(1); } }
+    .foot-lower { animation: loop-foot-lower 1s linear infinite; }
+    @keyframes loop-foot-lower { 0%, 26.875% { opacity: 0; transform: translateY(-14px) scale(1.08); animation-timing-function: ease-out; } 39.875% { opacity: 1; transform: translateY(1px) scale(.97); animation-timing-function: ease-out; } 46.875%, 87.5% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(0) scale(1); } }
+    .foot-upper { animation: loop-foot-upper 1s linear infinite; }
+    @keyframes loop-foot-upper { 0%, 38.75% { opacity: 0; transform: translateY(-14px) scale(1.08); animation-timing-function: ease-out; } 54.1875% { opacity: 1; transform: translateY(1px) scale(.97); animation-timing-function: ease-out; } 62.5%, 87.5% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(0) scale(1); } }
     @media (prefers-reduced-motion: reduce) { .step, .foot, .book { animation: none; } }
   </style>
   <g class="foundation">

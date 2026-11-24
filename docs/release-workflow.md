@@ -4,9 +4,9 @@
 
 ## 採用した環境構成
 
-| 用途 | URL | データ・API |
-| --- | --- | --- |
-| 本番 | https://kenryo-tankyu-archive.pages.dev | 正式データ・既存API |
+| 用途               | URL                                          | データ・API                   |
+| ------------------ | -------------------------------------------- | ----------------------------- |
+| 本番               | https://kenryo-tankyu-archive.pages.dev      | 正式データ・既存API           |
 | 先行確認版（デモ） | https://demo.kenryo-tankyu-archive.pages.dev | 本番と同じ正式データ・既存API |
 
 同じCloudflare Pagesプロジェクト `kenryo-tankyu-archive` のproductionとpreviewを使う。デモは `demo` の公開エイリアスを使う。同じコードから作り、別実装を長期間維持しない。公開時の `--branch demo` は配信先の指定であり、Gitで長期のdemoブランチを管理する必要はない。

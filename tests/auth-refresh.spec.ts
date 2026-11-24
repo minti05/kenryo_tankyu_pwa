@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-async function fixture(page: Page) {
+async function fixture(page: Page, initialRegistration?: 'processing' | 'waiting') {
   await page.route('**/src/features/auth/firebase.ts', (route) =>
     route.fulfill({
       contentType: 'application/javascript',
@@ -22,6 +22,12 @@ async function fixture(page: Page) {
       const uid = route.request().headers().authorization.replace('Bearer ', '');
       const gate = hold;
       if (gate) await gate;
+      if (initialRegistration && sessions === 1)
+        return route.fulfill({
+          json: { version: '1', uid, role: 'unassigned', registration: initialRegistration },
+        });
+      if (initialRegistration === 'processing' && sessions <= 3)
+        return route.fulfill({ status: 401, json: { error: { code: 'claims_refresh_required' } } });
       return route.fulfill({
         status,
         json:
@@ -34,7 +40,7 @@ async function fixture(page: Page) {
     return route.fulfill({ json: { ok: true } });
   });
   await page.goto('/tests/auth-refresh-harness.html');
-  await expect(page.getByTestId('loaded')).toHaveText('loaded');
+  if (!initialRegistration) await expect(page.getByTestId('loaded')).toHaveText('loaded');
   return {
     sessions: () => sessions,
     probes: () => probes,
@@ -56,6 +62,21 @@ async function fixture(page: Page) {
     },
   };
 }
+test('初回の権限反映中とトークン反映遅延を同じログインで通過する', async ({ page }) => {
+  const f = await fixture(page, 'processing');
+  await expect.poll(f.sessions).toBe(1);
+  await expect(page.getByTestId('loaded')).toHaveCount(0);
+  await expect(page.getByTestId('loaded')).toHaveText('loaded');
+  await expect(page.getByTestId('uid')).toHaveText('fixture-alice');
+  expect(f.sessions()).toBe(4);
+  expect(f.probes()).toBe(1);
+});
+test('利用登録待ちのアカウントは作品を開けない', async ({ page }) => {
+  const f = await fixture(page, 'waiting');
+  await expect(page.getByRole('heading', { name: '登録待ち' })).toBeVisible();
+  expect(f.sessions()).toBe(1);
+  expect(f.probes()).toBe(0);
+});
 test('同じユーザー・権限の認証更新は読みかけと取得済みデータを保持する', async ({ page }) => {
   const f = await fixture(page);
   const mount = await page.getByTestId('mount').textContent();
