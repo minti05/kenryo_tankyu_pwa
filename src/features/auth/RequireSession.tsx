@@ -21,7 +21,7 @@ export default function RequireSession({ children }: { children: React.ReactNode
   if (auth.session.role === 'unassigned')
     return (
       <div className="page-container empty-state">
-        <h1>登録待ち</h1>
+        <h1>{auth.session.registration === 'processing' ? '利用登録を反映中' : '登録待ち'}</h1>
         <p>
           {auth.session.registration === 'processing'
             ? '利用登録を反映しています。少し待ってから確認してください。'
